@@ -1940,3 +1940,36 @@ textarea:focus {
     text-align: center;
   }
 }
+
+body[data-page="home"] .page {
+  width: min(1180px, calc(100vw - 32px));
+  max-width: 1180px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+body[data-page="home"] .section {
+  width: 100%;
+  min-width: 0;
+}
+
+@media (min-width: 1180px) {
+  body[data-page="home"] .page {
+    width: min(1180px, calc(100vw - 64px));
+  }
+
+  body[data-page="home"] .match-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  body[data-page="home"] .page {
+    width: 100%;
+    max-width: 430px;
+    padding-right: 10px;
+    padding-left: 10px;
+    margin-right: auto;
+    margin-left: auto;
+  }
+}
