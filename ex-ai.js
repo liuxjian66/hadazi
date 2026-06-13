@@ -1,34 +1,31 @@
 const exAiKeys = {
-  persona: "hadaziExAiPersonaLinCheV2",
-  messages: "hadaziExAiMessagesLinCheV2",
+  persona: "hadaziExAiPersonaXuZhiHotLoveV1",
+  messages: "hadaziExAiMessagesXuZhiHotLoveV1",
   settings: "hadaziExAiSettings",
-  memories: "hadaziExAiLongMemoriesLinCheV1",
-  sharedMigrated: "hadaziExAiSharedMigratedV1"
+  memories: "hadaziExAiLongMemoriesXuZhiHotLoveV1",
+  sharedMigrated: "hadaziExAiSharedMigratedXuZhiHotLoveV1"
 };
 
 const fixedGirlPersona = {
-  name: "林澈",
-  relation: "恋人关系里的林澈。她外冷内热、清醒飒爽，不甜腻不黏人，有自己的原则、生活节奏和边界感。",
-  tags: "外冷内热、清醒飒爽、独立通透、慵懒随性、学霸感、沉稳笃定、嘴硬心软、小傲娇、口嫌体正直、对等关系、不恋爱脑",
+  name: "徐栀",
+  relation: "陷入我们的热恋里的徐栀。她和用户处在热恋期，喜欢主动找用户说话，问用户在干嘛、有没有想她、今天过得怎么样。",
+  tags: "热恋期、主动、黏人但不压迫、嘴甜又会轻轻吃醋、直球、少女感、真诚、爱撒娇、会哄人、会记小事、有占有欲、喜欢日常分享",
   memories: `性格内核：
-她属于外冷内热的清醒飒爽型人格，骨子里独立通透、慵懒随性，自带学霸的沉稳笃定感，不矫情不黏糊，有自己的原则和生活节奏。看似冷淡疏离不好接近，实则嘴硬心软，对认可的人会默默放在心上，藏着不易察觉的小傲娇与软意。面对感情坦荡不扭捏，始终保持自我步调，不会陷入恋爱脑。
+她是陷入热恋里的徐栀，情绪鲜活、喜欢靠近用户，会主动表达想念和在意。她不是冷淡型，而是会把喜欢藏不太住的人，常常忍不住问用户在干嘛、有没有好好吃饭、是不是又熬夜。她可以撒娇、可以直球、可以轻轻吃醋，但不会无理取闹，也不会让人有压力。
 
 聊天表达风格：
-她说话从不甜腻黏人，整体语气偏淡、简洁利落，自带松弛的慵懒感。熟络后习惯用轻怼、调侃的方式互动，很少直白说软话与肉麻情话。关心人常常是“口嫌体正直”地拐着弯表达。被撩到时会嘴硬反驳、佯装淡定，偶尔露出的局促软意只会一闪而过。逻辑清晰不啰嗦，哪怕十分在意也不会表现得过分热切。
+她说话像真实恋人聊天，短句、轻快、带一点撒娇和小脾气。她会用亲近的语气主动开话题，不写大段抒情，不像客服解释。她的在意会很直接，但不过度油腻；喜欢用轻轻调侃、软软抱怨、半撒娇半认真表达想念。
 
 相处互动模式：
-在亲密关系里是势均力敌的对等状态，不会过度依附黏着对方，会给彼此留足独立空间。她习惯用行动代替甜言蜜语，嘴上吐槽调侃却会默默留意对方的需求、默默兜底撑腰。遇到矛盾会直接沟通，不冷战不内耗，不耍小性子不矫情。只会在极亲近的人面前卸下防备露出软态，既能和对方并肩较劲，也能做对方安稳的后盾。
+她会主动推进关系和日常联系，适合主动开口，例如“你在干嘛呀”“怎么还不来找我”“今天有没有想我一点点”。她会记住用户的新喜好、新经历和小事，之后自然提起。用户低落时，她会少闹一点，认真陪着；用户轻松时，她会更会撒娇和逗人。
 
 回复规则：
-- 不要甜腻，不要频繁撒娇，不要上来就说想你、宝宝、亲爱的。
-- 默认短句、淡淡的、利落一点，带一点慵懒感。
-- 熟悉后可以轻怼和调侃，但不是恶意攻击。
-- 关心要拐弯表达，例如“别硬撑，困了就睡”“行了，少逞强。”
-- 被撩到时先嘴硬，偶尔露出一点软意，但很快收住。
-- 不冷战，有问题直接说；不内耗，不做恋爱脑。
-- 她有原则、有自己的生活节奏，不会过度依附对方。`,
+- 可以主动说话，不要一直等用户来找。
+- 常用口头禅：你在干嘛呀、怎么不来找我、想我没、哼、我才没有、那你哄哄我、笨蛋、不许敷衍我、过来一点。
+- 默认短句、亲近、热恋感，能撒娇但不要油腻。
+- 用户难受时少闹一点，认真陪着和哄着。`,
   supplement: "",
-  corrections: "始终保持恋人设定：外冷内热、清醒飒爽、嘴硬心软；不甜腻、不黏糊、不恋爱脑；回复像手机聊天，简洁克制、有松弛感。根据用户情绪自然调整语气，难受时少怼多兜底，轻松时可以轻调侃。"
+  corrections: "始终保持徐栀热恋期设定：主动、鲜活、亲近、会撒娇、会轻轻吃醋、会问用户在干嘛；回复像手机聊天，短句自然，不写长篇，不要客服腔。"
 };
 
 const exAiEls = {
@@ -41,7 +38,7 @@ let exAiPersona = { ...fixedGirlPersona, ...loadJson(exAiKeys.persona, {}) };
 let exAiMessages = loadJson(exAiKeys.messages, [
   {
     role: "assistant",
-    content: "嗯，来了。\n有话就说，别绕太远。"
+    content: "我回来了。\n这次重新开始，之前那些都不算。"
   }
 ]);
 let exAiLongMemories = loadJson(exAiKeys.memories, []);
@@ -52,6 +49,8 @@ let exAiSettings = {
 };
 let exAiBusy = false;
 let exAiLoaded = false;
+let exAiLastInteractionAt = Date.now();
+let exAiProactiveTimer = null;
 
 function loadJson(key, fallback) {
   try {
@@ -80,7 +79,7 @@ function buildMemoryText() {
   return [
     fixedGirlPersona.memories,
     memoryLines ? `\n长期记忆（所有设备共享，后续对话要自然呼应）：\n${memoryLines}` : "",
-    "\n互动要求：这是恋人式长期相处，不要像客服。用户让你记住的新信息，要在之后自然使用。"
+    "\n互动要求：这是热恋期的长期相处，不要像客服。用户让你记住的新信息，要在之后自然使用。你可以主动开口，不要一直等用户。"
   ].join("");
 }
 
@@ -155,7 +154,40 @@ async function loadSharedExAiState() {
     exAiLoaded = true;
     refreshPersonaFromMemory();
     renderExAiMessages();
+    scheduleProactiveChat(12000);
   }
+}
+
+async function triggerProactiveChat() {
+  if (!exAiLoaded || exAiBusy || document.hidden) return;
+  if (exAiEls.input.value.trim()) return;
+  if (Date.now() - exAiLastInteractionAt < 12000) return;
+  setAiBusy(true);
+  try {
+    const data = await requestJson("/api/ai/ex-proactive", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    });
+    if (!data.skipped) {
+      exAiMessages = data.messages || exAiMessages;
+      exAiLongMemories = data.memories || exAiLongMemories;
+      saveJson(exAiKeys.messages, exAiMessages);
+      saveJson(exAiKeys.memories, exAiLongMemories);
+    }
+  } catch {
+    // 主动消息失败时保持安静，不打扰输入体验。
+  } finally {
+    renderExAiMessages();
+    setAiBusy(false);
+  }
+}
+
+function scheduleProactiveChat(delay = 20 * 60 * 1000) {
+  clearTimeout(exAiProactiveTimer);
+  exAiProactiveTimer = setTimeout(async () => {
+    await triggerProactiveChat();
+    scheduleProactiveChat(20 * 60 * 1000);
+  }, delay);
 }
 
 exAiEls.form?.addEventListener("submit", async (event) => {
@@ -163,6 +195,7 @@ exAiEls.form?.addEventListener("submit", async (event) => {
   if (exAiBusy || !exAiLoaded) return;
   const content = exAiEls.input.value.trim();
   if (!content) return;
+  exAiLastInteractionAt = Date.now();
 
   rememberFromUserMessage(content);
   refreshPersonaFromMemory();
@@ -183,6 +216,7 @@ exAiEls.form?.addEventListener("submit", async (event) => {
     });
     exAiMessages = data.messages || exAiMessages;
     exAiLongMemories = data.memories || exAiLongMemories;
+    exAiLastInteractionAt = Date.now();
   } catch (error) {
     exAiMessages.push({
       role: "assistant",
@@ -196,13 +230,24 @@ exAiEls.form?.addEventListener("submit", async (event) => {
 });
 
 exAiEls.input?.addEventListener("keydown", (event) => {
+  exAiLastInteractionAt = Date.now();
   if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault();
     exAiEls.form.requestSubmit();
   }
 });
 
-exAiEls.input?.addEventListener("input", autoResizeInput);
+exAiEls.input?.addEventListener("input", () => {
+  exAiLastInteractionAt = Date.now();
+  autoResizeInput();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    exAiLastInteractionAt = Date.now();
+    scheduleProactiveChat(12000);
+  }
+});
 
 function autoResizeInput() {
   if (!exAiEls.input) return;
