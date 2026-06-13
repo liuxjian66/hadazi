@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="HaDaZi 个人页面，编辑简历、人设、性别、年龄、星座和出生日期。" />
+  <meta name="theme-color" content="#6d5dfc" />
+  <title>HaDaZi 个人页面</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="profile">
+  <header class="topbar">
+    <a class="brand" href="index.html"><span class="brand-mark">HD</span><span><strong>HaDaZi</strong><small>个人页面</small></span></a>
+    <nav class="topnav">
+      <a href="index.html">匹配朋友</a>
+      <a href="contacts.html">联系人</a>
+      <a href="plaza.html">广场</a>
+      <a class="active" href="profile.html">个人</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="section hero-compact">
+      <div>
+        <p class="eyebrow">Profile</p>
+        <h1>个人页面</h1>
+        <p>完善简历、人设、性别、年龄、星座和出生日期，系统会用这些信息优化匹配推荐。</p>
+      </div>
+      <a class="btn primary" href="index.html">回到匹配</a>
+    </section>
+
+    <section class="section card-section">
+      <form id="profileForm" class="profile-grid">
+        <label>昵称
+          <input id="nickname" type="text" placeholder="例如：小舟" maxlength="16" />
+        </label>
+        <label>性别
+          <select id="gender">
+            <option>未设置</option>
+            <option>男</option>
+            <option>女</option>
+            <option>其他</option>
+          </select>
+        </label>
+        <label>年龄
+          <input id="age" type="number" min="16" max="35" placeholder="例如：20" />
+        </label>
+        <label>出生日期
+          <input id="birthday" type="date" />
+        </label>
+        <label>星座
+          <select id="zodiac"></select>
+        </label>
+        <label>人格 MBTI
+          <select id="mbti">
+            <option value="">未测试</option>
+            <option>INTJ</option><option>INTP</option><option>ENTJ</option><option>ENTP</option>
+            <option>INFJ</option><option>INFP</option><option>ENFJ</option><option>ENFP</option>
+            <option>ISTJ</option><option>ISFJ</option><option>ESTJ</option><option>ESFJ</option>
+            <option>ISTP</option><option>ISFP</option><option>ESTP</option><option>ESFP</option>
+          </select>
+        </label>
+        <label>学校
+          <input id="school" type="text" placeholder="例如：海城大学" maxlength="24" />
+        </label>
+        <label>专业
+          <input id="major" type="text" placeholder="例如：计算机科学" maxlength="24" />
+        </label>
+        <label>想找什么搭子
+          <select id="goal">
+            <option>饭搭子</option>
+            <option>学习搭子</option>
+            <option>运动搭子</option>
+            <option>游戏搭子</option>
+            <option>旅行搭子</option>
+            <option>恋爱发展</option>
+          </select>
+        </label>
+        <label>可约时间
+          <select id="time">
+            <option>工作日晚上</option>
+            <option>周末白天</option>
+            <option>周末晚上</option>
+            <option>每天都可以</option>
+          </select>
+        </label>
+        <label class="wide">兴趣标签，逗号分隔
+          <input id="interests" type="text" placeholder="例如：羽毛球,电影,摄影,自习,王者荣耀" />
+        </label>
+        <label class="wide">简历
+          <textarea id="resume" rows="4" placeholder="例如：大二，喜欢自习、运动和周末探店，想认识能长期相处的朋友。"></textarea>
+        </label>
+        <label class="wide">一句话介绍
+          <textarea id="bio" rows="3" placeholder="例如：想找能一起自习、吃饭、周末 City Walk 的朋友。"></textarea>
+        </label>
+        <button class="btn primary wide" type="submit">保存个人资料</button>
+      </form>
+    </section>
+  </main>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

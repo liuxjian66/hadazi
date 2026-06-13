@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="HaDaZi 发布动态页面，编辑并发布校园广场内容。" />
+  <meta name="theme-color" content="#6d5dfc" />
+  <title>HaDaZi 发布动态</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="publish">
+  <header class="topbar">
+    <a class="brand" href="index.html"><span class="brand-mark">HD</span><span><strong>HaDaZi</strong><small>发布动态</small></span></a>
+    <nav class="topnav">
+      <a href="index.html">匹配朋友</a>
+      <a href="contacts.html">联系人</a>
+      <a href="plaza.html">广场</a>
+      <a href="profile.html">个人</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="section card-section">
+      <div class="section-head">
+        <p class="eyebrow">Edit</p>
+        <h1>编辑发布</h1>
+        <p>发布后会回到广场页面，动态会保存在本地和后端原型数据库里。</p>
+      </div>
+      <form id="publishForm" class="profile-grid">
+        <label class="wide">动态内容
+          <textarea id="postContent" rows="7" placeholder="例如：今晚想找人一起吃火锅，地点学校东门，有没有饭搭子？"></textarea>
+        </label>
+        <label>标签，逗号分隔
+          <input id="postTags" type="text" placeholder="饭搭子,今晚,火锅" />
+        </label>
+        <label>模拟图片数量
+          <select id="postPhotos">
+            <option value="0">不带图片</option>
+            <option value="1">1 张</option>
+            <option value="2">2 张</option>
+            <option value="3">3 张</option>
+          </select>
+        </label>
+        <button class="btn primary wide" type="submit">发布到广场</button>
+      </form>
+    </section>
+  </main>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

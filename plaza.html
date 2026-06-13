@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="HaDaZi 广场页面，像朋友圈一样查看和发布校园搭子动态。" />
+  <meta name="theme-color" content="#6d5dfc" />
+  <title>HaDaZi 广场</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="plaza">
+  <header class="topbar">
+    <a class="brand" href="index.html"><span class="brand-mark">HD</span><span><strong>HaDaZi</strong><small>校园广场</small></span></a>
+    <nav class="topnav">
+      <a href="index.html">匹配朋友</a>
+      <a href="contacts.html">联系人</a>
+      <a class="active" href="plaza.html">广场</a>
+      <a href="profile.html">个人</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="section hero-compact">
+      <div>
+        <p class="eyebrow">Plaza</p>
+        <h1>广场</h1>
+        <p>像朋友圈一样浏览大家的校园动态。右上角发布按钮可以进入编辑页面。</p>
+      </div>
+      <a class="btn primary" href="publish.html">发布</a>
+    </section>
+
+    <section class="section card-section">
+      <div id="plazaFeed" class="plaza-feed"></div>
+    </section>
+  </main>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

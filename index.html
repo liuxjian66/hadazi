@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="HaDaZi 是面向大学生的交友搭子 App，支持匹配朋友、联系人、聊天、广场动态、发布动态和个人资料。" />
+  <meta name="keywords" content="HaDaZi,哈搭子,大学生交友,校园交友,MBTI匹配,星座交友,校园搭子,聊天APP" />
+  <meta name="theme-color" content="#6d5dfc" />
+  <title>HaDaZi 匹配朋友</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="home">
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="HaDaZi 首页">
+      <span class="brand-mark">HD</span>
+      <span><strong>HaDaZi</strong><small>大学生搭子交友</small></span>
+    </a>
+    <nav class="topnav" aria-label="主导航">
+      <a class="active" href="index.html">匹配朋友</a>
+      <a href="contacts.html">联系人</a>
+      <a href="plaza.html">广场</a>
+      <a href="profile.html">个人</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="section hero-compact">
+      <div>
+        <p class="eyebrow">HaDaZi 首页</p>
+        <h1>匹配朋友</h1>
+        <p>首页只做朋友匹配，根据 MBTI、人设资料、兴趣、星座和搭子目标推荐更合拍的同学。</p>
+      </div>
+      <div class="page-actions">
+        <a class="btn primary" href="contacts.html">联系人</a>
+        <a class="btn ghost" href="plaza.html">去广场</a>
+        <a class="btn subtle" href="profile.html">完善个人资料</a>
+      </div>
+    </section>
+
+    <section class="section card-section">
+      <div class="section-head">
+        <p class="eyebrow">推荐</p>
+        <h2>可能合得来的同学</h2>
+        <p>点击“添加好友”后会进入联系人页面；点击“聊天”会跳转到独立聊天页面。</p>
+      </div>
+      <div class="match-tools">
+        <button class="chip active" data-filter="all">全部</button>
+        <button class="chip" data-filter="饭搭子">饭搭子</button>
+        <button class="chip" data-filter="学习搭子">学习搭子</button>
+        <button class="chip" data-filter="运动搭子">运动搭子</button>
+        <button class="chip" data-filter="游戏搭子">游戏搭子</button>
+      </div>
+      <div id="matchList" class="match-list"></div>
+    </section>
+  </main>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

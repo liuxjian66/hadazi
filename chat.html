@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="HaDaZi 独立聊天页面，和联系人单独聊天。" />
+  <meta name="theme-color" content="#6d5dfc" />
+  <title>HaDaZi 聊天</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="chat">
+  <header class="topbar">
+    <a class="brand" href="index.html"><span class="brand-mark">HD</span><span><strong>HaDaZi</strong><small>聊天</small></span></a>
+    <nav class="topnav">
+      <a href="index.html">匹配朋友</a>
+      <a href="contacts.html">联系人</a>
+      <a href="plaza.html">广场</a>
+      <a href="profile.html">个人</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="section chat-page">
+      <div class="chat-title">
+        <div>
+          <strong id="chatTitle">联系人聊天框</strong>
+          <span id="chatMeta">选择联系人后开始聊天</span>
+        </div>
+        <a class="btn ghost" href="contacts.html">返回联系人</a>
+      </div>
+      <div id="messages" class="messages"></div>
+      <form id="chatForm" class="chat-form">
+        <input id="messageInput" type="text" placeholder="输入消息，例如：周末要不要一起去图书馆？" />
+        <button class="btn primary" type="submit">发送</button>
+      </form>
+    </section>
+  </main>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
