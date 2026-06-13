@@ -320,16 +320,9 @@ function renderAuthBox() {
         </div>
         <div class="page-actions">
           <a class="btn ghost" href="profile.html">${hasMbti() ? "个人主页" : "去做 MBTI"}</a>
-          <button class="btn subtle" type="button" id="logoutBtn">退出登录</button>
         </div>
       </div>
     `;
-    $("#logoutBtn")?.addEventListener("click", () => {
-      saveSession(null);
-      profile = { ...defaultProfile };
-      persistProfile();
-      location.reload();
-    });
     return;
   }
   box.innerHTML = `
