@@ -21,6 +21,11 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABAS
 const useSupabase = Boolean(supabaseUrl && supabaseKey);
 const supabase = useSupabase ? createClient(supabaseUrl, supabaseKey) : null;
 const phonePattern = /^1[3-9]\d{9}$/;
+const DAY = 24 * 60 * 60 * 1000;
+const CHAT_RETENTION_DAYS = 3;
+const PLAZA_RETENTION_DAYS = 7;
+const DEFAULT_GROUP_ID = "group_public";
+const DEFAULT_GROUP_NAME = "校园大厅";
 
 const mbtiPairs = {
   INTJ: ["ENFP", "ENTP", "INFJ", "INTP"],
@@ -68,6 +73,11 @@ function safeText(value, fallback = "") {
   return String(value || fallback).trim().slice(0, 500);
 }
 
+function isFresh(value, days) {
+  const time = new Date(value || 0).getTime();
+  return Number.isFinite(time) && Date.now() - time <= days * DAY;
+}
+
 function hashPassword(password) {
   return crypto.createHash("sha256").update(String(password)).digest("hex");
 }
@@ -83,6 +93,8 @@ function normalizeProfile(body) {
     id: safeText(body.id, `user_${Date.now()}`),
     phone: safeText(body.phone, "").slice(0, 11),
     nickname: safeText(body.nickname, "我").slice(0, 16),
+    avatar: safeText(body.avatar, "").slice(0, 4),
+    avatarUrl: safeText(body.avatarUrl, "").slice(0, 1000),
     gender: safeText(body.gender, "未设置").slice(0, 8),
     age: safeText(body.age, "").slice(0, 3),
     birthday: safeText(body.birthday, "").slice(0, 12),
@@ -106,6 +118,8 @@ function normalizeUserPerson(profile) {
   return {
     id: profile.id,
     name: profile.nickname || "同学",
+    avatar: profile.avatar || "",
+    avatarUrl: profile.avatarUrl || "",
     mbti: profile.mbti || "",
     mbtiComplete: Boolean(profile.mbtiComplete && profile.mbti),
     zodiac: profile.zodiac || "未设置",
@@ -137,7 +151,7 @@ function normalizePost(body) {
     personId: safeText(body.personId, "me"),
     userId: safeText(body.userId, ""),
     authorName: safeText(body.authorName, "我").slice(0, 16),
-    time: safeText(body.time, "刚刚").slice(0, 16),
+    time: safeText(body.time, "刚刚").slice(0, 24),
     content: safeText(body.content).slice(0, 500),
     tags: Array.isArray(body.tags)
       ? body.tags.map((item) => safeText(item).slice(0, 20)).filter(Boolean).slice(0, 8)
@@ -147,11 +161,12 @@ function normalizePost(body) {
       ? body.comments.map((item) => safeText(item).slice(0, 80)).filter(Boolean).slice(0, 20)
       : [],
     photos: Math.max(0, Math.min(3, Number(body.photos || 0))),
-    createdAt: new Date().toISOString()
+    createdAt: body.createdAt || new Date().toISOString()
   };
 }
 
 function normalizeMessage(body) {
+  const kind = ["text", "emoji", "image"].includes(body.kind) ? body.kind : "text";
   return {
     id: safeText(body.id, `msg_${Date.now()}_${Math.random().toString(16).slice(2)}`),
     userId: safeText(body.userId),
@@ -159,9 +174,48 @@ function normalizeMessage(body) {
     fromUserId: safeText(body.fromUserId, body.userId),
     toUserId: safeText(body.toUserId, body.personId),
     from: safeText(body.from, "me").slice(0, 16),
+    senderName: safeText(body.senderName, "").slice(0, 24),
+    senderAvatar: safeText(body.senderAvatar, "").slice(0, 4),
+    senderAvatarUrl: safeText(body.senderAvatarUrl, "").slice(0, 1000),
+    kind,
     text: safeText(body.text).slice(0, 500),
-    time: new Date().toISOString()
+    imageData: kind === "image" ? safeText(body.imageData, "").slice(0, 900000) : "",
+    revoked: Boolean(body.revoked),
+    time: body.time || new Date().toISOString()
   };
+}
+
+function weeklySystemPosts() {
+  const now = new Date();
+  const day = now.getDay() || 7;
+  const monday = new Date(now);
+  monday.setHours(9, 0, 0, 0);
+  monday.setDate(now.getDate() - day + 1);
+  const topics = [
+    ["周一开学搭子集合", "这周想找学习搭子、饭搭子或运动搭子的同学，可以在广场发动态，也可以去群聊里打招呼。", ["周一", "学习搭子", "本周"]],
+    ["周二自习和咖啡局", "今天适合约自习、图书馆、咖啡店。发一条你的空闲时间，让同校同学来找你。", ["周二", "自习", "咖啡"]],
+    ["周三运动局", "篮球、羽毛球、夜跑都可以约。广场里的真人动态可以聊天，也能加好友。", ["周三", "运动搭子", "校园"]],
+    ["周四游戏和桌游局", "想开黑、桌游、密室或剧本杀的同学，发动态说清楚时间和地点更容易被看到。", ["周四", "游戏搭子", "桌游"]],
+    ["周五饭搭子", "周五适合约饭、夜市和校园周边探店。看到合适的人可以先加好友再聊天。", ["周五", "饭搭子", "探店"]],
+    ["周六出门局", "周末可以 City Walk、看展、拍照、逛街。新人登录也能看到本周广场内容。", ["周六", "旅行搭子", "拍照"]],
+    ["周日复盘和下周搭子", "整理一下这周认识的新朋友，也可以提前约下周固定搭子。", ["周日", "固定搭子", "下周"]]
+  ];
+  return topics.map(([title, content, tags], index) => {
+    const createdAt = new Date(monday.getTime() + index * DAY).toISOString();
+    return normalizePost({
+      id: `weekly_${monday.toISOString().slice(0, 10)}_${index}`,
+      personId: "system_plaza",
+      userId: "system_plaza",
+      authorName: "HaDaZi 广场",
+      time: title,
+      content,
+      tags,
+      likes: 0,
+      comments: [],
+      photos: 0,
+      createdAt
+    });
+  });
 }
 
 async function authByPhone(body) {
@@ -261,14 +315,15 @@ async function getPosts() {
   if (!useSupabase) {
     const db = readDb();
     const people = await getPeople();
-    return db.posts.map((post) => ({ ...post, person: people.find((person) => person.id === post.personId) || null }));
+    return [...db.posts.filter((post) => isFresh(post.createdAt, PLAZA_RETENTION_DAYS)), ...weeklySystemPosts()]
+      .map((post) => ({ ...post, person: people.find((person) => person.id === post.personId) || null }));
   }
 
   const people = await getPeople();
   const { data, error } = await supabase.from("posts").select("id,data,created_at").order("created_at", { ascending: false });
   if (error) throw error;
 
-  return data.map(fromRow).map((post) => ({
+  return [...data.map(fromRow).filter((post) => isFresh(post.createdAt, PLAZA_RETENTION_DAYS)), ...weeklySystemPosts()].map((post) => ({
     ...post,
     person: people.find((person) => person.id === post.personId) || null
   }));
@@ -328,6 +383,23 @@ async function getFriends(userId) {
   return friendIds.map((personId) => people.find((person) => person.id === personId)).filter(Boolean);
 }
 
+async function removeFriend(userId, personId) {
+  if (!userId || !personId) {
+    const err = new Error("好友参数不正确");
+    err.status = 400;
+    throw err;
+  }
+  if (!useSupabase) {
+    const db = readDb();
+    db.friends[userId] = (db.friends[userId] || []).filter((id) => id !== personId);
+    writeDb(db);
+    return db.friends[userId];
+  }
+  const { error } = await supabase.from("friends").delete().eq("user_id", userId).eq("person_id", personId);
+  if (error) throw error;
+  return (await getFriends(userId)).map((person) => person.id);
+}
+
 async function addFriend(userId, personId) {
   const people = await getPeople();
   const person = people.find((item) => item.id === personId);
@@ -357,7 +429,7 @@ async function getMessages(userId, personId) {
     return readDb().messages.filter((msg) => (
       (msg.userId === userId && msg.personId === personId) ||
       (msg.userId === personId && msg.personId === userId)
-    ));
+    ) && isFresh(msg.time, CHAT_RETENTION_DAYS));
   }
   const { data, error } = await supabase
     .from("messages")
@@ -365,7 +437,7 @@ async function getMessages(userId, personId) {
     .or(`and(user_id.eq.${userId},person_id.eq.${personId}),and(user_id.eq.${personId},person_id.eq.${userId})`)
     .order("created_at", { ascending: true });
   if (error) throw error;
-  return data.map(fromRow);
+  return data.map(fromRow).filter((msg) => isFresh(msg.time, CHAT_RETENTION_DAYS));
 }
 
 async function saveMessage(message) {
@@ -384,12 +456,54 @@ async function saveMessage(message) {
   return fromRow(data);
 }
 
+async function updateMessage(messageId, updater) {
+  if (!useSupabase) {
+    const db = readDb();
+    const index = db.messages.findIndex((msg) => msg.id === messageId);
+    if (index === -1) return null;
+    db.messages[index] = updater(db.messages[index]);
+    writeDb(db);
+    return db.messages[index];
+  }
+  const { data: oldRow, error: oldError } = await supabase.from("messages").select("id,data").eq("id", messageId).maybeSingle();
+  if (oldError) throw oldError;
+  if (!oldRow) return null;
+  const next = updater(fromRow(oldRow));
+  const { data, error } = await supabase.from("messages").update({ data: next }).eq("id", messageId).select("id,data").single();
+  if (error) throw error;
+  return fromRow(data);
+}
+
+async function getUserPosts(userId) {
+  return (await getPosts()).filter((post) => post.personId === userId || post.userId === userId);
+}
+
+async function getGroupMembers(groupId) {
+  if (groupId !== DEFAULT_GROUP_ID) return [];
+  return getPeople();
+}
+
+async function getGroupMessages(groupId) {
+  if (!useSupabase) {
+    return readDb().messages
+      .filter((msg) => msg.personId === groupId && isFresh(msg.time, CHAT_RETENTION_DAYS))
+      .sort((a, b) => new Date(a.time) - new Date(b.time));
+  }
+  const { data, error } = await supabase
+    .from("messages")
+    .select("id,data,created_at")
+    .eq("person_id", groupId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data.map(fromRow).filter((msg) => isFresh(msg.time, CHAT_RETENTION_DAYS));
+}
+
 function asyncRoute(handler) {
   return (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
 }
 
 app.use(cors());
-app.use(express.json({ limit: "100kb" }));
+app.use(express.json({ limit: "2mb" }));
 app.use(express.static(__dirname));
 
 app.get("/api/health", (req, res) => {
@@ -425,8 +539,17 @@ app.post("/api/friends", asyncRoute(async (req, res) => {
   res.json({ ok: true, friends });
 }));
 
+app.delete("/api/friends", asyncRoute(async (req, res) => {
+  const friends = await removeFriend(safeText(req.body.userId), safeText(req.body.personId));
+  res.json({ ok: true, friends });
+}));
+
 app.get("/api/profile/:id", asyncRoute(async (req, res) => {
   res.json(stripPrivateProfile(await getProfile(req.params.id)));
+}));
+
+app.get("/api/profile/:id/posts", asyncRoute(async (req, res) => {
+  res.json(await getUserPosts(req.params.id));
 }));
 
 app.post("/api/profile", asyncRoute(async (req, res) => {
@@ -455,6 +578,14 @@ app.get("/api/messages/:userId/:personId", asyncRoute(async (req, res) => {
   res.json(await getMessages(req.params.userId, req.params.personId));
 }));
 
+app.post("/api/messages/:id/revoke", asyncRoute(async (req, res) => {
+  const message = await updateMessage(req.params.id, (old) => ({ ...old, revoked: true, text: "这条消息已撤回", imageData: "", kind: "text" }));
+  if (!message) return res.status(404).json({ error: "消息不存在" });
+  io.to(message.userId).emit("chat:revoke", message);
+  io.to(message.personId).emit("chat:revoke", message);
+  res.json(message);
+}));
+
 app.post("/api/messages", asyncRoute(async (req, res) => {
   const people = await getPeople();
   const person = people.find((item) => item.id === req.body.personId);
@@ -472,9 +603,53 @@ app.post("/api/messages", asyncRoute(async (req, res) => {
   res.json(saved);
 }));
 
+app.get("/api/groups", asyncRoute(async (req, res) => {
+  const members = await getGroupMembers(DEFAULT_GROUP_ID);
+  res.json([{ id: DEFAULT_GROUP_ID, name: DEFAULT_GROUP_NAME, membersCount: members.length }]);
+}));
+
+app.get("/api/groups/:groupId/members", asyncRoute(async (req, res) => {
+  const members = await getGroupMembers(req.params.groupId);
+  res.json(members);
+}));
+
+app.get("/api/groups/:groupId/messages", asyncRoute(async (req, res) => {
+  res.json(await getGroupMessages(req.params.groupId));
+}));
+
+app.post("/api/groups/:groupId/messages", asyncRoute(async (req, res) => {
+  const senderProfile = await getProfile(safeText(req.body.userId));
+  if (!senderProfile?.phone) return res.status(401).json({ error: "请先用手机号登录或注册" });
+  if (!senderProfile?.mbti) return res.status(403).json({ error: "做完 MBTI 并保存个人资料后才能进群唠嗑" });
+  const message = normalizeMessage({
+    ...req.body,
+    personId: req.params.groupId,
+    fromUserId: senderProfile.id,
+    toUserId: req.params.groupId,
+    senderName: senderProfile.nickname,
+    senderAvatar: senderProfile.avatar,
+    senderAvatarUrl: senderProfile.avatarUrl
+  });
+  if (!message.text && !message.imageData) return res.status(400).json({ error: "消息内容不能为空" });
+  const saved = await saveMessage(message);
+  io.to(`group:${req.params.groupId}`).emit("group:message", saved);
+  res.json(saved);
+}));
+
+app.post("/api/groups/:groupId/messages/:id/revoke", asyncRoute(async (req, res) => {
+  const message = await updateMessage(req.params.id, (old) => ({ ...old, revoked: true, text: "这条消息已撤回", imageData: "", kind: "text" }));
+  if (!message) return res.status(404).json({ error: "消息不存在" });
+  io.to(`group:${req.params.groupId}`).emit("group:revoke", message);
+  res.json(message);
+}));
+
 io.on("connection", (socket) => {
   socket.on("join", (userId) => {
     if (userId) socket.join(String(userId));
+  });
+
+  socket.on("group:join", (groupId) => {
+    if (groupId) socket.join(`group:${groupId}`);
   });
 
   socket.on("chat:send", async (payload) => {

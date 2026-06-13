@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="HaDaZi 群聊页面，支持多人实时聊天、群成员、加好友、撤回和消息提醒设置。" />
+  <meta name="theme-color" content="#6d5dfc" />
+  <title>HaDaZi 群聊</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="groups">
+  <header class="topbar">
+    <a class="brand" href="index.html"><span class="brand-mark">HD</span><span><strong>HaDaZi</strong><small>群聊</small></span></a>
+    <nav class="topnav">
+      <a href="index.html">匹配朋友</a>
+      <a href="contacts.html">联系人</a>
+      <a class="active" href="groups.html">群聊</a>
+      <a href="plaza.html">广场</a>
+      <a href="profile.html">个人</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="section group-layout">
+      <aside class="group-side">
+        <div>
+          <p class="eyebrow">Group</p>
+          <h1>校园大厅</h1>
+          <p>多人实时唠嗑，支持文字、表情、图片、撤回、成员列表和提醒设置。</p>
+        </div>
+        <label class="switch-line">
+          <input id="groupNotify" type="checkbox" checked />
+          群消息提醒
+        </label>
+        <div class="section-head compact">
+          <p class="eyebrow">成员</p>
+          <h2>群成员</h2>
+        </div>
+        <div id="groupMembers" class="member-list"></div>
+      </aside>
+      <section class="group-chat">
+        <div class="chat-title">
+          <div>
+            <strong id="groupTitle">校园大厅</strong>
+            <span id="groupMeta">完成 MBTI 后可参与群聊</span>
+          </div>
+        </div>
+        <div id="groupMessages" class="messages"></div>
+        <form id="groupForm" class="chat-form">
+          <input id="groupInput" type="text" placeholder="输入群消息，或点表情/图片" />
+          <button id="groupEmojiBtn" class="btn subtle" type="button">😊</button>
+          <label class="btn subtle file-btn">图片
+            <input id="groupImage" type="file" accept="image/*" hidden />
+          </label>
+          <button class="btn primary" type="submit">发送</button>
+        </form>
+      </section>
+    </section>
+  </main>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

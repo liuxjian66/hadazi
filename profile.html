@@ -17,6 +17,7 @@
     <nav class="topnav">
       <a href="index.html">匹配朋友</a>
       <a href="contacts.html">联系人</a>
+      <a href="groups.html">群聊</a>
       <a href="plaza.html">广场</a>
       <a class="active" href="profile.html">个人</a>
     </nav>
@@ -27,18 +28,34 @@
       <div>
         <p class="eyebrow">Profile</p>
         <h1>个人页面</h1>
-        <p>完成 MBTI 并保存资料后，才能在首页匹配真人并进入聊天。</p>
+        <p>这里是你的个人简历展示页。需要修改头像、MBTI、学校或介绍时，点右上角编辑。</p>
       </div>
-      <a class="btn primary" href="index.html">回到匹配</a>
+      <div class="page-actions">
+        <button id="editProfileBtn" class="btn primary" type="button">编辑资料</button>
+        <a class="btn ghost" href="index.html">回到匹配</a>
+      </div>
     </section>
 
     <section class="section card-section">
-      <div class="section-head">
-        <p class="eyebrow">账号信息</p>
-        <h2 id="accountPhone">当前账号：未登录</h2>
-        <p>手机号只用于登录注册。请选择 MBTI 后保存，系统才会把你加入真人匹配池。</p>
-      </div>
-      <form id="profileForm" class="profile-grid">
+      <div id="profileResume" class="resume-card"></div>
+    </section>
+
+    <section id="profileEditModal" class="modal hidden">
+      <div class="modal-backdrop" data-close-profile></div>
+      <div class="modal-panel edit-panel">
+        <button class="modal-close" type="button" data-close-profile>×</button>
+        <div class="section-head">
+          <p class="eyebrow">编辑资料</p>
+          <h2 id="accountPhone">当前账号：未登录</h2>
+          <p>设置头像并选择 MBTI 后，才能加入真人匹配池。</p>
+        </div>
+        <form id="profileForm" class="profile-grid">
+        <label>头像文字
+          <input id="avatar" type="text" placeholder="例如：舟、🙂" maxlength="4" />
+        </label>
+        <label>头像图片链接
+          <input id="avatarUrl" type="url" placeholder="可选：粘贴头像图片地址" maxlength="1000" />
+        </label>
         <label>昵称
           <input id="nickname" type="text" placeholder="例如：小舟" maxlength="16" />
         </label>
@@ -101,8 +118,9 @@
         <label class="wide">一句话介绍
           <textarea id="bio" rows="3" placeholder="例如：想找能一起自习、吃饭、周末 City Walk 的朋友。"></textarea>
         </label>
-        <button class="btn primary wide" type="submit">保存个人资料</button>
+        <button class="btn primary wide" type="submit">保存修改</button>
       </form>
+      </div>
     </section>
   </main>
   <script src="/socket.io/socket.io.js"></script>

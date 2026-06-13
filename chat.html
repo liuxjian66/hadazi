@@ -17,6 +17,7 @@
     <nav class="topnav">
       <a href="index.html">匹配朋友</a>
       <a href="contacts.html">联系人</a>
+      <a href="groups.html">群聊</a>
       <a href="plaza.html">广场</a>
       <a href="profile.html">个人</a>
     </nav>
@@ -34,8 +35,16 @@
       <div id="messages" class="messages"></div>
       <form id="chatForm" class="chat-form">
         <input id="messageInput" type="text" placeholder="输入消息，例如：周末要不要一起去图书馆？" />
+        <button id="emojiBtn" class="btn subtle" type="button">😊</button>
         <button class="btn primary" type="submit">发送</button>
       </form>
+    </section>
+    <section id="personModal" class="modal hidden">
+      <div class="modal-backdrop" data-close-person></div>
+      <div class="modal-panel profile-panel">
+        <button class="modal-close" type="button" data-close-person>×</button>
+        <div id="personModalBody" class="profile-modal-body"></div>
+      </div>
     </section>
   </main>
   <script src="/socket.io/socket.io.js"></script>
