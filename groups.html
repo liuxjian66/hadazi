@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="HaDaZi 群聊页面，支持多人实时聊天、群成员、加好友、撤回和消息提醒设置。" />
+  <meta name="description" content="HaDaZi 大厅页面，支持多人实时聊天、成员列表、加好友、撤回和消息提醒设置。" />
   <meta name="theme-color" content="#6d5dfc" />
-  <title>HaDaZi 群聊</title>
+  <title>HaDaZi 大厅</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -13,11 +13,11 @@
 </head>
 <body data-page="groups">
   <header class="topbar">
-    <a class="brand" href="index.html"><span class="brand-mark">HD</span><span><strong>HaDaZi</strong><small>群聊</small></span></a>
+    <a class="brand" href="index.html"><span class="brand-mark">HD</span><span><strong>HaDaZi</strong><small>大厅</small></span></a>
     <nav class="topnav">
       <a href="index.html">匹配朋友</a>
       <a href="contacts.html">联系人</a>
-      <a class="active" href="groups.html">群聊</a>
+      <a class="active" href="groups.html">大厅</a>
       <a href="plaza.html">广场</a>
       <a href="profile.html">个人</a>
     </nav>
@@ -33,7 +33,7 @@
         </div>
         <label class="switch-line">
           <input id="groupNotify" type="checkbox" checked />
-          群消息提醒
+          大厅消息提醒
         </label>
         <div class="section-head compact">
           <p class="eyebrow">成员</p>
@@ -45,7 +45,7 @@
         <div class="chat-title">
           <div>
             <strong id="groupTitle">校园大厅</strong>
-            <span id="groupMeta">完成 MBTI 后可参与群聊</span>
+            <span id="groupMeta">完成 MBTI 后可参与大厅唠嗑</span>
           </div>
         </div>
         <div id="groupMessages" class="messages"></div>

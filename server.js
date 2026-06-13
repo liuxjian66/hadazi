@@ -21,6 +21,7 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABAS
 const useSupabase = Boolean(supabaseUrl && supabaseKey);
 const supabase = useSupabase ? createClient(supabaseUrl, supabaseKey) : null;
 const phonePattern = /^1[3-9]\d{9}$/;
+const resetCodes = new Map();
 const DAY = 24 * 60 * 60 * 1000;
 const CHAT_RETENTION_DAYS = 3;
 const PLAZA_RETENTION_DAYS = 7;
@@ -84,7 +85,7 @@ function hashPassword(password) {
 
 function stripPrivateProfile(profile) {
   if (!profile) return profile;
-  const { passwordHash, password, ...safeProfile } = profile;
+  const { passwordHash, password, resetCode, ...safeProfile } = profile;
   return safeProfile;
 }
 
@@ -192,9 +193,9 @@ function weeklySystemPosts() {
   monday.setHours(9, 0, 0, 0);
   monday.setDate(now.getDate() - day + 1);
   const topics = [
-    ["周一开学搭子集合", "这周想找学习搭子、饭搭子或运动搭子的同学，可以在广场发动态，也可以去群聊里打招呼。", ["周一", "学习搭子", "本周"]],
+    ["周一开学搭子集合", "这周想找学习搭子、饭搭子或运动搭子的同学，可以在广场发动态，也可以去大厅里打招呼。", ["周一", "学习搭子", "本周"]],
     ["周二自习和咖啡局", "今天适合约自习、图书馆、咖啡店。发一条你的空闲时间，让同校同学来找你。", ["周二", "自习", "咖啡"]],
-    ["周三运动局", "篮球、羽毛球、夜跑都可以约。广场里的真人动态可以聊天，也能加好友。", ["周三", "运动搭子", "校园"]],
+    ["周三运动局", "篮球、羽毛球、夜跑都可以约。广场动态可以聊天，也能加好友。", ["周三", "运动搭子", "校园"]],
     ["周四游戏和桌游局", "想开黑、桌游、密室或剧本杀的同学，发动态说清楚时间和地点更容易被看到。", ["周四", "游戏搭子", "桌游"]],
     ["周五饭搭子", "周五适合约饭、夜市和校园周边探店。看到合适的人可以先加好友再聊天。", ["周五", "饭搭子", "探店"]],
     ["周六出门局", "周末可以 City Walk、看展、拍照、逛街。新人登录也能看到本周广场内容。", ["周六", "旅行搭子", "拍照"]],
@@ -252,6 +253,76 @@ async function authByPhone(body) {
   profile.passwordHash = existing?.passwordHash || passwordHash;
   await saveProfile(profile);
   return stripPrivateProfile(profile);
+}
+
+async function updatePassword(body) {
+  const userId = safeText(body.userId);
+  const oldPassword = safeText(body.oldPassword).slice(0, 64);
+  const newPassword = safeText(body.newPassword).slice(0, 64);
+  if (newPassword.length < 6) {
+    const err = new Error("新密码至少 6 位");
+    err.status = 400;
+    throw err;
+  }
+  const profile = await getProfile(userId);
+  if (!profile?.phone) {
+    const err = new Error("账号不存在");
+    err.status = 404;
+    throw err;
+  }
+  if (profile.passwordHash && profile.passwordHash !== hashPassword(oldPassword)) {
+    const err = new Error("原密码不正确");
+    err.status = 401;
+    throw err;
+  }
+  profile.passwordHash = hashPassword(newPassword);
+  return stripPrivateProfile(await saveProfile(profile));
+}
+
+async function createResetCode(body) {
+  const phone = safeText(body.phone).replace(/\s/g, "");
+  if (!phonePattern.test(phone)) {
+    const err = new Error("请输入正确的中国大陆手机号");
+    err.status = 400;
+    throw err;
+  }
+  const id = `phone_${phone}`;
+  const profile = await getProfile(id);
+  if (!profile?.phone) {
+    const err = new Error("这个手机号还没有注册");
+    err.status = 404;
+    throw err;
+  }
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  resetCodes.set(phone, { code, expiresAt: Date.now() + 10 * 60 * 1000 });
+  return { phone, code, expiresInMinutes: 10 };
+}
+
+async function resetPassword(body) {
+  const phone = safeText(body.phone).replace(/\s/g, "");
+  const code = safeText(body.code).slice(0, 6);
+  const newPassword = safeText(body.newPassword).slice(0, 64);
+  const record = resetCodes.get(phone);
+  if (!record || record.code !== code || record.expiresAt < Date.now()) {
+    const err = new Error("验证码不正确或已过期");
+    err.status = 400;
+    throw err;
+  }
+  if (newPassword.length < 6) {
+    const err = new Error("新密码至少 6 位");
+    err.status = 400;
+    throw err;
+  }
+  const id = `phone_${phone}`;
+  const profile = await getProfile(id);
+  if (!profile?.phone) {
+    const err = new Error("账号不存在");
+    err.status = 404;
+    throw err;
+  }
+  profile.passwordHash = hashPassword(newPassword);
+  resetCodes.delete(phone);
+  return stripPrivateProfile(await saveProfile(profile));
 }
 
 function calcMatch(profile, person) {
@@ -426,10 +497,14 @@ async function addFriend(userId, personId) {
 
 async function getMessages(userId, personId) {
   if (!useSupabase) {
-    return readDb().messages.filter((msg) => (
-      (msg.userId === userId && msg.personId === personId) ||
-      (msg.userId === personId && msg.personId === userId)
-    ) && isFresh(msg.time, CHAT_RETENTION_DAYS));
+    return readDb().messages.filter((msg) => {
+      const fromId = msg.fromUserId || msg.userId;
+      const toId = msg.toUserId || msg.personId;
+      return (
+        ((fromId === userId && toId === personId) || (fromId === personId && toId === userId)) &&
+        isFresh(msg.time, CHAT_RETENTION_DAYS)
+      );
+    });
   }
   const { data, error } = await supabase
     .from("messages")
@@ -437,7 +512,14 @@ async function getMessages(userId, personId) {
     .or(`and(user_id.eq.${userId},person_id.eq.${personId}),and(user_id.eq.${personId},person_id.eq.${userId})`)
     .order("created_at", { ascending: true });
   if (error) throw error;
-  return data.map(fromRow).filter((msg) => isFresh(msg.time, CHAT_RETENTION_DAYS));
+  return data.map(fromRow).filter((msg) => {
+    const fromId = msg.fromUserId || msg.userId;
+    const toId = msg.toUserId || msg.personId;
+    return (
+      ((fromId === userId && toId === personId) || (fromId === personId && toId === userId)) &&
+      isFresh(msg.time, CHAT_RETENTION_DAYS)
+    );
+  });
 }
 
 async function saveMessage(message) {
@@ -518,6 +600,20 @@ app.get("/api/people", asyncRoute(async (req, res) => {
 app.post("/api/auth/phone", asyncRoute(async (req, res) => {
   const user = await authByPhone(req.body);
   res.json({ ok: true, userId: user.id, profile: user });
+}));
+
+app.post("/api/auth/password", asyncRoute(async (req, res) => {
+  const user = await updatePassword(req.body);
+  res.json({ ok: true, profile: user });
+}));
+
+app.post("/api/auth/reset-code", asyncRoute(async (req, res) => {
+  res.json({ ok: true, ...(await createResetCode(req.body)) });
+}));
+
+app.post("/api/auth/reset-password", asyncRoute(async (req, res) => {
+  const user = await resetPassword(req.body);
+  res.json({ ok: true, profile: user });
 }));
 
 app.get("/api/posts", asyncRoute(async (req, res) => {

@@ -25,6 +25,7 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  overflow-x: hidden;
   color: var(--text);
   background:
     radial-gradient(circle at 10% 5%, rgba(255, 122, 182, 0.25), transparent 30%),
@@ -67,10 +68,25 @@ textarea {
 }
 
 .topnav a {
+  position: relative;
   padding: 11px 14px;
   border-radius: 999px;
   color: #55516f;
   font-weight: 800;
+}
+
+.topnav a.has-unread::after,
+.topnav a.has-group-unread::after {
+  content: "";
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  border-radius: 999px;
+  background: #ff2f57;
+  box-shadow: 0 0 0 2px rgba(255, 47, 87, 0.14);
 }
 
 .topnav a:hover,
@@ -83,6 +99,7 @@ textarea {
   display: grid;
   gap: 24px;
   width: min(1280px, calc(100% - 32px));
+  max-width: calc(100vw - 32px);
   margin: 24px auto;
 }
 
@@ -544,8 +561,13 @@ textarea {
 }
 
 .auth-form {
-  grid-template-columns: 1.2fr repeat(3, minmax(160px, 1fr)) auto;
+  grid-template-columns: minmax(220px, 1.2fr) repeat(3, minmax(130px, 1fr)) auto auto;
   align-items: end;
+}
+
+.reset-form.hidden,
+.hidden {
+  display: none !important;
 }
 
 .auth-form h3,
@@ -585,6 +607,48 @@ label {
 
 .wide {
   grid-column: 1 / -1;
+}
+
+.password-panel {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: rgba(109, 93, 252, 0.06);
+}
+
+.password-panel h3,
+.password-panel p {
+  margin: 0;
+}
+
+.password-panel p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.avatar-wrap {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.person-unread-dot {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #ff2f57;
+  box-shadow: 0 0 0 2px rgba(255, 47, 87, 0.12);
+}
+
+.contact-card.has-person-unread {
+  border-color: rgba(255, 47, 87, 0.28);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 47, 87, 0.06));
 }
 
 input,

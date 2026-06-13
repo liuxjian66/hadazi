@@ -17,7 +17,7 @@
     <nav class="topnav">
       <a href="index.html">匹配朋友</a>
       <a href="contacts.html">联系人</a>
-      <a href="groups.html">群聊</a>
+      <a href="groups.html">大厅</a>
       <a href="plaza.html">广场</a>
       <a class="active" href="profile.html">个人</a>
     </nav>
@@ -47,9 +47,21 @@
         <div class="section-head">
           <p class="eyebrow">编辑资料</p>
           <h2 id="accountPhone">当前账号：未登录</h2>
-          <p>设置头像并选择 MBTI 后，才能加入真人匹配池。</p>
+          <p>设置头像并选择 MBTI 后，系统会按资料和兴趣推荐合适的朋友。</p>
         </div>
         <form id="profileForm" class="profile-grid">
+        <div class="wide password-panel">
+          <h3>修改密码</h3>
+          <p>不想改密码可以留空；填写时需要输入原密码和新密码。</p>
+          <div class="profile-grid">
+            <label>原密码
+              <input id="oldPassword" type="password" placeholder="当前密码" autocomplete="current-password" />
+            </label>
+            <label>新密码
+              <input id="newPassword" type="password" placeholder="至少 6 位" autocomplete="new-password" />
+            </label>
+          </div>
+        </div>
         <label>头像文字
           <input id="avatar" type="text" placeholder="例如：舟、🙂" maxlength="4" />
         </label>

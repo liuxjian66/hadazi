@@ -8,6 +8,8 @@ const friendKey = "hadaziFriends";
 const chatKey = "hadaziChats";
 const postKey = "hadaziPosts";
 const groupNotifyKey = "hadaziGroupNotify";
+const unreadKey = "hadaziUnread";
+const resetDevKey = "hadaziLastResetCode";
 const backendEnabled = location.protocol.startsWith("http");
 const GROUP_ID = "group_public";
 const DAY = 24 * 60 * 60 * 1000;
@@ -42,6 +44,7 @@ let currentUserId = session?.userId || "";
 let profile = loadProfile();
 let friends = loadArray(friendKey);
 let chats = loadObject(chatKey);
+let unreadState = loadObject(unreadKey);
 let localPosts = loadArray(postKey).filter((post) => isFresh(post.createdAt, 7));
 let peopleCache = [];
 let groupMessages = [];
@@ -119,6 +122,37 @@ function saveChats() {
     chats[key] = (chats[key] || []).filter((msg) => isFresh(msg.rawTime || msg.time, 3));
   });
   localStorage.setItem(chatKey, JSON.stringify(chats));
+}
+
+function saveUnread() {
+  unreadState.private ||= {};
+  unreadState.group ||= false;
+  localStorage.setItem(unreadKey, JSON.stringify(unreadState));
+  updateNavBadges();
+}
+
+function hasPrivateUnread() {
+  return Object.values(unreadState.private || {}).some(Boolean);
+}
+
+function markPrivateUnread(personId, value = true) {
+  unreadState.private ||= {};
+  if (value) unreadState.private[personId] = true;
+  else delete unreadState.private[personId];
+  saveUnread();
+}
+
+function markGroupUnread(value = true) {
+  unreadState.group = Boolean(value);
+  saveUnread();
+}
+
+function updateNavBadges() {
+  $$(".topnav a").forEach((link) => {
+    const href = link.getAttribute("href");
+    link.classList.toggle("has-unread", href === "contacts.html" && hasPrivateUnread());
+    link.classList.toggle("has-group-unread", href === "groups.html" && Boolean(unreadState.group));
+  });
 }
 
 function savePosts() {
@@ -302,7 +336,7 @@ function renderAuthBox() {
     <form id="phoneAuthForm" class="auth-form">
       <div>
         <p class="eyebrow">手机号登录/注册</p>
-        <h3>登录后才能匹配真人唠嗑</h3>
+        <h3>登录后才能匹配唠嗑</h3>
         <p>首次输入手机号和密码会自动注册；已有账号会校验密码登录。</p>
       </div>
       <label>手机号
@@ -315,9 +349,64 @@ function renderAuthBox() {
         <input id="authNickname" type="text" placeholder="首次注册可填写" maxlength="16" />
       </label>
       <button class="btn primary" type="submit">登录 / 注册</button>
+      <button class="btn subtle" type="button" id="forgotPasswordBtn">忘记密码</button>
+    </form>
+    <form id="resetPasswordForm" class="auth-form reset-form hidden">
+      <div>
+        <p class="eyebrow">找回密码</p>
+        <h3>用验证码修改密码</h3>
+        <p>输入手机号获取验证码，再设置新密码。</p>
+      </div>
+      <label>手机号
+        <input id="resetPhone" type="tel" placeholder="请输入 11 位手机号" maxlength="11" />
+      </label>
+      <label>验证码
+        <input id="resetCode" type="text" placeholder="6 位验证码" maxlength="6" />
+      </label>
+      <label>新密码
+        <input id="resetPassword" type="password" placeholder="至少 6 位" />
+      </label>
+      <button class="btn ghost" type="button" id="getResetCodeBtn">获取验证码</button>
+      <button class="btn primary" type="submit">修改密码</button>
     </form>
   `;
   $("#phoneAuthForm").addEventListener("submit", handlePhoneAuth);
+  $("#forgotPasswordBtn")?.addEventListener("click", () => $("#resetPasswordForm")?.classList.toggle("hidden"));
+  $("#getResetCodeBtn")?.addEventListener("click", requestResetCode);
+  $("#resetPasswordForm")?.addEventListener("submit", handleResetPassword);
+}
+
+async function requestResetCode() {
+  const phone = $("#resetPhone").value.trim();
+  try {
+    const result = await api("/api/auth/reset-code", {
+      method: "POST",
+      body: JSON.stringify({ phone })
+    });
+    localStorage.setItem(resetDevKey, result.code);
+    $("#resetCode").value = result.code;
+    toast(`验证码已生成：${result.code}`);
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function handleResetPassword(event) {
+  event.preventDefault();
+  try {
+    await api("/api/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({
+        phone: $("#resetPhone").value.trim(),
+        code: $("#resetCode").value.trim(),
+        newPassword: $("#resetPassword").value.trim()
+      })
+    });
+    toast("密码已修改，请用新密码登录");
+    $("#resetPasswordForm").classList.add("hidden");
+  } catch (error) {
+    alert(error.message);
+  }
 }
 
 async function handlePhoneAuth(event) {
@@ -346,29 +435,29 @@ async function renderHome() {
   if (!list) return;
   renderAuthBox();
   if (!isLoggedIn()) {
-    list.innerHTML = `<p class="empty">请先用手机号登录或注册，登录后才能看到真人匹配列表。</p>`;
+    list.innerHTML = `<p class="empty">请先用手机号登录或注册，登录后才能看到匹配列表。</p>`;
     return;
   }
   if (!hasMbti()) {
     list.innerHTML = `
       <article class="empty-card">
         <h3>先完成 MBTI，才能开始匹配唠嗑</h3>
-        <p>系统只给完成 MBTI 的真实用户互相推荐。点击下面按钮去个人页设置头像、MBTI 和简历。</p>
+        <p>系统会根据 MBTI、兴趣和资料推荐更合适的朋友。点击下面按钮去个人页设置头像、MBTI 和简历。</p>
         <button class="btn primary" type="button" id="needMbtiBtn">去个人页</button>
       </article>
     `;
     $("#needMbtiBtn")?.addEventListener("click", () => requireMbti());
     return;
   }
-  list.innerHTML = `<p class="empty">正在加载真人匹配...</p>`;
+  list.innerHTML = `<p class="empty">正在加载匹配...</p>`;
   const matches = await loadMatches();
   const visible = matches.filter((person) => currentFilter === "all" || person.goal === currentFilter);
   if (!visible.length) {
     list.innerHTML = `
       <article class="empty-card">
-        <h3>暂时没有可匹配的真人</h3>
-        <p>等更多同学用手机号登录并保存 MBTI 后，这里会自动出现真人匹配对象。你也可以先去群聊大厅。</p>
-        <a class="btn primary" href="groups.html">去群聊</a>
+        <h3>暂时没有可匹配的同学</h3>
+        <p>等更多同学登录并保存 MBTI 后，这里会自动出现匹配对象。你也可以先去大厅。</p>
+        <a class="btn primary" href="groups.html">去大厅</a>
       </article>
     `;
     return;
@@ -426,19 +515,19 @@ async function renderContacts() {
   }
   const contactPeople = await loadFriends();
   list.innerHTML = contactPeople.length ? contactPeople.map((person) => `
-    <article class="contact-card" data-chat="${person.id}">
+    <article class="contact-card ${unreadState.private?.[person.id] ? "has-person-unread" : ""}" data-chat="${person.id}">
       <div class="contact-main">
-        ${avatarHtml(person)}
+        <span class="avatar-wrap">${avatarHtml(person)}${unreadState.private?.[person.id] ? "<i class=\"person-unread-dot\"></i>" : ""}</span>
         <span class="contact-info">
           <h3>${escapeHtml(person.name || "同学")} · ${escapeHtml(person.mbti || "MBTI")}</h3>
-          <span>${escapeHtml(person.gender || "未设置")}｜${escapeHtml(String(person.age || ""))}岁｜${escapeHtml(person.zodiac || "未设置")}｜${escapeHtml(person.goal || "搭子")}</span>
+          <span>${unreadState.private?.[person.id] ? "有新消息｜" : ""}${escapeHtml(person.gender || "未设置")}｜${escapeHtml(String(person.age || ""))}岁｜${escapeHtml(person.zodiac || "未设置")}｜${escapeHtml(person.goal || "搭子")}</span>
         </span>
       </div>
       <div class="contact-actions">
         <a class="btn primary" href="chat.html?id=${encodeURIComponent(person.id)}">聊天</a>
       </div>
     </article>
-  `).join("") : `<p class="empty">还没有联系人。去首页匹配真人，或去群聊里添加同学。</p>`;
+  `).join("") : `<p class="empty">还没有联系人。去首页匹配，或去大厅里添加同学。</p>`;
   list.querySelectorAll(".contact-card").forEach((card) => {
     card.addEventListener("click", (event) => {
       if (event.target.closest("a")) return;
@@ -454,14 +543,14 @@ async function renderChat() {
   if (!messages || !form) return;
   if (!requireMbti()) {
     $("#chatTitle").textContent = "请先完成登录和 MBTI";
-    $("#chatMeta").textContent = "完成后才能匹配真人聊天";
-    messages.innerHTML = `<p class="empty">做完 MBTI 并保存资料后，才能和真人唠嗑。</p>`;
+    $("#chatMeta").textContent = "完成后才能匹配聊天";
+    messages.innerHTML = `<p class="empty">做完 MBTI 并保存资料后，才能唠嗑。</p>`;
     input.disabled = true;
     return;
   }
   const personId = new URLSearchParams(location.search).get("id");
   if (!personId) {
-    messages.innerHTML = `<p class="empty">请先从首页、广场或联系人页面选择一个真人聊天对象。</p>`;
+    messages.innerHTML = `<p class="empty">请先从首页、广场或联系人页面选择一个聊天对象。</p>`;
     input.disabled = true;
     return;
   }
@@ -478,12 +567,13 @@ async function renderChat() {
   }
   peopleCache = mergePeople(peopleCache, [person]);
   await addFriend(personId, true);
+  markPrivateUnread(personId, false);
   $("#chatTitle").innerHTML = `<button class="title-person" data-open-person="${person.id}" type="button">${avatarHtml(person, "avatar small-avatar")}${escapeHtml(person.name)} · ${escapeHtml(person.mbti)}</button>`;
   $("#chatMeta").textContent = `${person.gender || "未设置"}｜${person.age || ""}岁｜${person.zodiac || "未设置"}｜${person.goal || "搭子"}`;
 
   const render = () => {
     chats[personId] = (chats[personId] || []).filter((msg) => isFresh(msg.rawTime || msg.time, 3));
-    messages.innerHTML = chats[personId].length ? chats[personId].map((msg) => privateMessageHtml(msg, person)).join("") : `<p class="empty">你们还没有消息，发一句开始真人聊天吧。</p>`;
+    messages.innerHTML = chats[personId].length ? chats[personId].map((msg) => privateMessageHtml(msg, person)).join("") : `<p class="empty">你们还没有消息，发一句开始聊天吧。</p>`;
     messages.scrollTop = messages.scrollHeight;
     bindMessageAvatarClicks();
   };
@@ -493,8 +583,11 @@ async function renderChat() {
     const remoteMessages = await api(`/api/messages/${encodeURIComponent(currentUserId)}/${encodeURIComponent(personId)}`);
     chats[personId] = (Array.isArray(remoteMessages) ? remoteMessages : []).filter((msg) => isFresh(msg.time, 3)).map((msg) => ({
       id: msg.id,
-      from: msg.fromUserId === currentUserId || msg.from === "me" ? "me" : "other",
+      from: isMessageMine(msg) ? "me" : "other",
       fromUserId: msg.fromUserId,
+      userId: msg.userId,
+      toUserId: msg.toUserId,
+      personId: msg.personId,
       text: msg.text,
       kind: msg.kind || "text",
       imageData: msg.imageData || "",
@@ -522,7 +615,7 @@ async function renderChat() {
 }
 
 function privateMessageHtml(msg, person) {
-  const mine = msg.from === "me" || msg.fromUserId === currentUserId;
+  const mine = isMessageMine(msg);
   const sender = mine ? myPerson() : person;
   const body = msg.revoked ? "这条消息已撤回" : msg.kind === "image" && msg.imageData ? `<img class="chat-image" src="${escapeAttr(msg.imageData)}" alt="聊天图片" />` : escapeHtml(msg.text);
   return `
@@ -537,6 +630,12 @@ function privateMessageHtml(msg, person) {
   `;
 }
 
+function isMessageMine(msg) {
+  const fromId = msg.fromUserId || msg.userId;
+  if (fromId) return fromId === currentUserId;
+  return msg.from === "me";
+}
+
 function bindMessageAvatarClicks() {
   $$("[data-open-person]").forEach((btn) => {
     btn.addEventListener("click", () => openPersonModal(btn.dataset.openPerson));
@@ -549,6 +648,9 @@ async function sendMessage(personId, text, render) {
     id: `local_${Date.now()}`,
     from: "me",
     fromUserId: currentUserId,
+    userId: currentUserId,
+    toUserId: personId,
+    personId,
     text,
     kind: "text",
     rawTime: new Date().toISOString(),
@@ -653,7 +755,7 @@ async function renderPlaza() {
         <div class="tag-row">${(post.tags || []).map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>
         <p>❤️ ${post.likes || 0}　💬 ${(post.comments || []).slice(0, 2).map(escapeHtml).join(" / ")}</p>
         <div class="post-actions">
-          ${!isSystem && !isMine ? `<button class="btn primary" data-chat="${person.id}">聊天</button><button class="btn ghost" data-add-friend="${person.id}">${isFriend(person.id) ? "已是好友" : "添加好友"}</button>` : isMine ? `<a class="btn ghost" href="profile.html">查看个人页面</a>` : `<a class="btn ghost" href="groups.html">去群聊大厅</a>`}
+          ${!isSystem && !isMine ? `<button class="btn primary" data-chat="${person.id}">聊天</button><button class="btn ghost" data-add-friend="${person.id}">${isFriend(person.id) ? "已是好友" : "添加好友"}</button>` : isMine ? `<a class="btn ghost" href="profile.html">查看个人页面</a>` : `<a class="btn ghost" href="groups.html">去大厅</a>`}
           <button class="btn subtle" data-like-post>点赞</button>
         </div>
       </article>
@@ -803,6 +905,14 @@ function initProfile() {
       return;
     }
     try {
+      const oldPassword = $("#oldPassword")?.value.trim();
+      const newPassword = $("#newPassword")?.value.trim();
+      if (oldPassword || newPassword) {
+        await api("/api/auth/password", {
+          method: "POST",
+          body: JSON.stringify({ userId: currentUserId, oldPassword, newPassword })
+        });
+      }
       await saveProfileRemote();
       $("#profileEditModal").classList.add("hidden");
       renderProfileResume();
@@ -815,6 +925,7 @@ function initProfile() {
 
 async function renderGroups() {
   if (!requireMbti()) return;
+  markGroupUnread(false);
   const memberBox = $("#groupMembers");
   const messagesBox = $("#groupMessages");
   const form = $("#groupForm");
@@ -827,7 +938,7 @@ async function renderGroups() {
 
   const members = await api(`/api/groups/${GROUP_ID}/members`).catch(() => []);
   peopleCache = mergePeople(peopleCache, members);
-  $("#groupMeta").textContent = `${members.length} 位已完成 MBTI 的同学在群里`;
+  $("#groupMeta").textContent = `${members.length} 位已完成 MBTI 的同学在大厅`;
   memberBox.innerHTML = members.length ? members.map((member) => `
     <article class="member-card">
       ${avatarHtml(member, "avatar small-avatar")}
@@ -842,7 +953,7 @@ async function renderGroups() {
 
   const render = () => {
     groupMessages = groupMessages.filter((msg) => isFresh(msg.time, 3));
-    messagesBox.innerHTML = groupMessages.length ? groupMessages.map(groupMessageHtml).join("") : `<p class="empty">群里还没有消息，发一句开始唠嗑吧。</p>`;
+    messagesBox.innerHTML = groupMessages.length ? groupMessages.map(groupMessageHtml).join("") : `<p class="empty">大厅还没有消息，发一句开始唠嗑吧。</p>`;
     messagesBox.scrollTop = messagesBox.scrollHeight;
     messagesBox.querySelectorAll("[data-revoke-group]").forEach((btn) => {
       btn.addEventListener("click", async () => {
@@ -883,7 +994,7 @@ async function renderGroups() {
 function groupMessageHtml(msg) {
   const mine = msg.fromUserId === currentUserId || msg.userId === currentUserId;
   const sender = mine ? myPerson() : getPerson(msg.fromUserId) || { name: msg.senderName || "同学", avatar: msg.senderAvatar, avatarUrl: msg.senderAvatarUrl };
-  const body = msg.revoked ? "这条消息已撤回" : msg.kind === "image" && msg.imageData ? `<img class="chat-image" src="${escapeAttr(msg.imageData)}" alt="群聊图片" />` : escapeHtml(msg.text);
+  const body = msg.revoked ? "这条消息已撤回" : msg.kind === "image" && msg.imageData ? `<img class="chat-image" src="${escapeAttr(msg.imageData)}" alt="大厅图片" />` : escapeHtml(msg.text);
   return `
     <div class="message-row ${mine ? "me" : "other"}">
       ${!mine ? avatarHtml(sender, "avatar chat-avatar") : ""}
@@ -940,6 +1051,9 @@ function initSocket() {
       id: msg.id,
       from: "other",
       fromUserId: msg.fromUserId,
+      userId: msg.userId,
+      toUserId: msg.toUserId,
+      personId: msg.personId,
       text: msg.text,
       kind: msg.kind || "text",
       imageData: msg.imageData || "",
@@ -948,6 +1062,9 @@ function initSocket() {
       time: formatTime(msg.time)
     });
     saveChats();
+    if (document.body.dataset.page !== "chat" || new URLSearchParams(location.search).get("id") !== otherId) {
+      markPrivateUnread(otherId, true);
+    }
     if (activePrivateRender) activePrivateRender();
   });
   socket.on("chat:revoke", (msg) => {
@@ -960,7 +1077,8 @@ function initSocket() {
   socket.on("group:message", (msg) => {
     if (msg.fromUserId === currentUserId) return;
     groupMessages.push(msg);
-    if (localStorage.getItem(groupNotifyKey) !== "off") toast(`群聊新消息：${msg.senderName || "同学"}`);
+    if (document.body.dataset.page !== "groups") markGroupUnread(true);
+    if (localStorage.getItem(groupNotifyKey) !== "off") toast(`大厅新消息：${msg.senderName || "同学"}`);
     if (activeGroupRender) activeGroupRender();
   });
   socket.on("group:revoke", (msg) => {
@@ -1005,6 +1123,7 @@ function escapeAttr(value) {
 async function init() {
   initSocket();
   if (isLoggedIn()) await refreshProfile().catch(() => {});
+  updateNavBadges();
   const page = document.body.dataset.page;
   if (page === "home") {
     initHomeFilters();
