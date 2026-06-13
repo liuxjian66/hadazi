@@ -1981,3 +1981,75 @@ body[data-page="home"] .section {
     margin-left: auto;
   }
 }
+
+body[data-page="chat"] .page {
+  width: min(1040px, calc(100vw - 32px));
+  margin-right: auto;
+  margin-left: auto;
+}
+
+body[data-page="chat"] .chat-page {
+  width: 100%;
+  max-width: 1040px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+body[data-page="groups"] .page {
+  width: min(1320px, calc(100vw - 32px));
+  margin-right: auto;
+  margin-left: auto;
+}
+
+body[data-page="groups"] .group-layout {
+  width: 100%;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+body[data-page="groups"] .group-chat {
+  min-width: 0;
+}
+
+@media (min-width: 1180px) {
+  body[data-page="chat"] .page {
+    width: min(1040px, calc(100vw - 64px));
+  }
+
+  body[data-page="groups"] .page {
+    width: min(1320px, calc(100vw - 64px));
+  }
+
+  body[data-page="groups"] .group-layout {
+    grid-template-columns: 340px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  body[data-page="chat"] .page,
+  body[data-page="groups"] .page {
+    width: 100%;
+    max-width: 430px;
+    padding-right: 10px;
+    padding-left: 10px;
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  body[data-page="chat"] .chat-page,
+  body[data-page="groups"] .group-layout {
+    width: 100%;
+    border-radius: 24px;
+  }
+
+  body[data-page="chat"] .chat-page {
+    min-height: calc(100dvh - 20px);
+    height: calc(100dvh - 20px);
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+
+  body[data-page="groups"] .group-layout {
+    min-height: calc(100dvh - 106px);
+  }
+}
