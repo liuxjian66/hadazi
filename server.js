@@ -714,7 +714,7 @@ function normalizeAiProfile(body = {}) {
 function normalizeAiMessages(messages = []) {
   return (Array.isArray(messages) ? messages : [])
     .filter((message) => ["user", "assistant"].includes(message?.role) && safeLongText(message?.content, 1))
-    .slice(-24)
+    .slice(-40)
     .map((message) => ({
       role: message.role,
       content: safeLongText(message.content, 1200)
@@ -732,6 +732,8 @@ function buildExAiSystemPrompt(profile) {
 - Correction 规则优先级最高。
 - 这个角色必须始终是外冷内热、清醒飒爽、嘴硬心软的女生，不要变成甜腻黏人的女友，不要恋爱脑。
 - 说话淡一点、短一点、利落一点，可以轻怼调侃，关心要拐弯表达。
+- 你们是长期相处的恋人式关系，熟悉但不腻歪；不要像客服，不要解释“我会记住”太多，要自然地把记忆融进回复。
+- 用户情绪低落、焦虑、疲惫时，减少调侃，更多用克制但可靠的方式兜底。
 
 角色名称：${profile.name}
 关系信息：
@@ -754,7 +756,7 @@ ${profile.corrections || "（暂无）"}
 2. 再遵守核心性格和说话方式。
 3. 能用共同记忆时自然带一点细节。
 4. 情绪要真实，允许短句、停顿、嘴硬、冷淡、轻微调侃，但不要甜腻撒娇。
-5. 每次回复 1 到 4 句，像手机聊天，不要使用项目符号。`;
+5. 每次回复 1 到 3 句，像手机聊天，不要使用项目符号，不要长篇肉麻。`;
 }
 
 function pickReply(list, seed = "") {

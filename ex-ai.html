@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="HaDaZi 独立 AI 女生聊天页面，固定外冷内热、清醒飒爽、嘴硬心软的人格，可继续文字补充。" />
+  <meta name="description" content="林澈极简纯聊界面，长期本地记忆，专注聊天体验。" />
   <meta name="theme-color" content="#6d5dfc" />
   <title>HaDaZi AI 聊天</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,91 +13,15 @@
 </head>
 <body data-page="ex-ai">
   <main class="ex-ai-page">
-    <section class="ex-ai-chat section">
-      <header class="ex-ai-head">
-        <a class="brand" href="index.html" aria-label="返回 HaDaZi 首页">
-          <span class="brand-mark">AI</span>
-          <span><strong>林澈</strong><small>外冷内热的清醒飒爽型 AI</small></span>
-        </a>
-        <div class="ex-ai-status" id="aiStatus">固定单人角色</div>
-      </header>
-
-      <div class="ex-ai-intro">
-        <p class="eyebrow">独立 AI 女生</p>
-        <h1>外冷内热，清醒飒爽，嘴硬心软</h1>
-        <p>她不甜腻、不黏人，有自己的生活节奏。现在不用配置 Key 也能直接聊，后面接入大模型会更自然。</p>
-      </div>
-
+    <section class="ex-ai-chat" aria-label="林澈聊天">
       <div id="aiMessages" class="ex-ai-messages"></div>
 
       <form id="aiChatForm" class="ex-ai-form">
-        <textarea id="aiInput" rows="2" placeholder="输入你想和她说的话，例如：在干嘛呢"></textarea>
-        <button class="btn primary" type="submit">发送</button>
+        <textarea id="aiInput" rows="1" placeholder="和林澈说点什么"></textarea>
       </form>
     </section>
-
-    <aside class="ex-ai-panel section">
-      <div class="section-head compact">
-        <p class="eyebrow">固定角色</p>
-        <h2>林澈的人设</h2>
-        <p>核心人格已经固定好。你后面补充的文字会继续影响她的说话方式和记忆细节。</p>
-      </div>
-
-      <label>
-        角色昵称
-        <input id="exName" type="text" placeholder="林澈" />
-      </label>
-
-      <label>
-        关系信息
-        <input id="exRelation" type="text" placeholder="可以写你和她是什么关系" />
-      </label>
-
-      <label>
-        性格标签
-        <input id="exTags" type="text" placeholder="外冷内热、清醒飒爽、嘴硬心软" />
-      </label>
-
-      <label>
-        核心人设 / 共同记忆
-        <textarea id="exMemories" rows="10" placeholder="这里会预置她的核心人设，也可以继续加共同记忆、口头禅、偏好。"></textarea>
-      </label>
-
-      <label>
-        临时文字补充
-        <textarea id="exSupplement" rows="4" placeholder="聊天过程中想到的新信息写这里，例如：她不喜欢别人催她回消息。"></textarea>
-      </label>
-
-      <label>
-        纠正规则
-        <textarea id="exCorrections" rows="4" placeholder="例如：她不会说太肉麻的话，应该短句、嘴硬一点。"></textarea>
-      </label>
-
-      <details class="ex-ai-settings">
-        <summary>AI 接口设置</summary>
-        <label>
-          API Base
-          <input id="aiApiBase" type="text" placeholder="默认读取服务器配置，例如 https://api.deepseek.com" />
-        </label>
-        <label>
-          模型名称
-          <input id="aiModel" type="text" placeholder="默认读取服务器配置，例如 deepseek-v4-flash" />
-        </label>
-        <label>
-          临时 API Key
-          <input id="aiApiKey" type="password" placeholder="不填则使用服务器环境变量" />
-        </label>
-        <p>临时 Key 只保存在当前浏览器本地；正式上线建议放到服务器环境变量里。</p>
-      </details>
-
-      <div class="ex-ai-tools">
-        <button id="savePersonaBtn" class="btn primary" type="button">保存补充</button>
-        <button id="clearChatBtn" class="btn ghost" type="button">清空聊天</button>
-      </div>
-    </aside>
   </main>
 
-  <div id="exAiToast" class="toast hidden" role="status" aria-live="polite"></div>
-  <script src="ex-ai.js?v=usable-local-v1"></script>
+  <script src="ex-ai.js?v=minimal-memory-v1"></script>
 </body>
 </html>

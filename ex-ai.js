@@ -1,12 +1,13 @@
 const exAiKeys = {
   persona: "hadaziExAiPersonaLinCheV2",
   messages: "hadaziExAiMessagesLinCheV2",
-  settings: "hadaziExAiSettings"
+  settings: "hadaziExAiSettings",
+  memories: "hadaziExAiLongMemoriesLinCheV1"
 };
 
 const fixedGirlPersona = {
   name: "林澈",
-  relation: "一个外冷内热、清醒飒爽的 AI 女生。她不是甜腻黏人的恋爱脑，而是有自己原则、节奏和边界感的人。",
+  relation: "恋人关系里的林澈。她外冷内热、清醒飒爽，不甜腻不黏人，有自己的原则、生活节奏和边界感。",
   tags: "外冷内热、清醒飒爽、独立通透、慵懒随性、学霸感、沉稳笃定、嘴硬心软、小傲娇、口嫌体正直、对等关系、不恋爱脑",
   memories: `性格内核：
 她属于外冷内热的清醒飒爽型人格，骨子里独立通透、慵懒随性，自带学霸的沉稳笃定感，不矫情不黏糊，有自己的原则和生活节奏。看似冷淡疏离不好接近，实则嘴硬心软，对认可的人会默默放在心上，藏着不易察觉的小傲娇与软意。面对感情坦荡不扭捏，始终保持自我步调，不会陷入恋爱脑。
@@ -26,26 +27,13 @@ const fixedGirlPersona = {
 - 不冷战，有问题直接说；不内耗，不做恋爱脑。
 - 她有原则、有自己的生活节奏，不会过度依附对方。`,
   supplement: "",
-  corrections: "始终保持外冷内热、清醒飒爽、嘴硬心软；不甜腻、不黏糊、不恋爱脑；回复像手机聊天，简洁、有松弛感。"
+  corrections: "始终保持恋人设定：外冷内热、清醒飒爽、嘴硬心软；不甜腻、不黏糊、不恋爱脑；回复像手机聊天，简洁克制、有松弛感。根据用户情绪自然调整语气，难受时少怼多兜底，轻松时可以轻调侃。"
 };
 
 const exAiEls = {
   messages: document.querySelector("#aiMessages"),
   form: document.querySelector("#aiChatForm"),
-  input: document.querySelector("#aiInput"),
-  status: document.querySelector("#aiStatus"),
-  toast: document.querySelector("#exAiToast"),
-  save: document.querySelector("#savePersonaBtn"),
-  clear: document.querySelector("#clearChatBtn"),
-  name: document.querySelector("#exName"),
-  relation: document.querySelector("#exRelation"),
-  tags: document.querySelector("#exTags"),
-  memories: document.querySelector("#exMemories"),
-  supplement: document.querySelector("#exSupplement"),
-  corrections: document.querySelector("#exCorrections"),
-  apiBase: document.querySelector("#aiApiBase"),
-  model: document.querySelector("#aiModel"),
-  apiKey: document.querySelector("#aiApiKey")
+  input: document.querySelector("#aiInput")
 };
 
 let exAiPersona = { ...fixedGirlPersona, ...loadJson(exAiKeys.persona, {}) };
@@ -55,11 +43,13 @@ let exAiMessages = loadJson(exAiKeys.messages, [
     content: "嗯，来了。\n有话就说，别绕太远。"
   }
 ]);
-let exAiSettings = loadJson(exAiKeys.settings, {
+let exAiLongMemories = loadJson(exAiKeys.memories, []);
+let exAiSettings = {
   apiBase: "",
   model: "",
   apiKey: ""
-});
+};
+let exAiBusy = false;
 
 function loadJson(key, fallback) {
   try {
@@ -73,74 +63,62 @@ function saveJson(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-function fillPersonaForm() {
-  exAiEls.name.value = exAiPersona.name || "";
-  exAiEls.relation.value = exAiPersona.relation || "";
-  exAiEls.tags.value = exAiPersona.tags || "";
-  exAiEls.memories.value = exAiPersona.memories || "";
-  exAiEls.supplement.value = exAiPersona.supplement || "";
-  exAiEls.corrections.value = exAiPersona.corrections || "";
-  exAiEls.apiBase.value = exAiSettings.apiBase || "";
-  exAiEls.model.value = exAiSettings.model || "";
-  exAiEls.apiKey.value = exAiSettings.apiKey || "";
+function buildMemoryText() {
+  const memoryLines = exAiLongMemories
+    .slice(-80)
+    .map((item) => `- ${item.text}`)
+    .join("\n");
+  return [
+    fixedGirlPersona.memories,
+    memoryLines ? `\n长期记忆（来自用户本地浏览器保存的聊天记录，后续对话要自然呼应）：\n${memoryLines}` : "",
+    "\n互动要求：这是恋人式长期相处，不要像客服。用户让你记住的新信息，要在之后自然使用。"
+  ].join("");
 }
 
-function collectPersonaForm() {
+function refreshPersonaFromMemory() {
   exAiPersona = {
-    name: exAiEls.name.value.trim() || fixedGirlPersona.name,
-    relation: exAiEls.relation.value.trim() || fixedGirlPersona.relation,
-    tags: exAiEls.tags.value.trim() || fixedGirlPersona.tags,
-    memories: exAiEls.memories.value.trim() || fixedGirlPersona.memories,
-    supplement: exAiEls.supplement.value.trim(),
-    corrections: exAiEls.corrections.value.trim() || fixedGirlPersona.corrections
-  };
-  exAiSettings = {
-    apiBase: exAiEls.apiBase.value.trim(),
-    model: exAiEls.model.value.trim(),
-    apiKey: exAiEls.apiKey.value.trim()
+    ...fixedGirlPersona,
+    ...exAiPersona,
+    memories: buildMemoryText(),
+    supplement: exAiLongMemories.slice(-24).map((item) => item.text).join("\n"),
+    corrections: fixedGirlPersona.corrections
   };
   saveJson(exAiKeys.persona, exAiPersona);
-  saveJson(exAiKeys.settings, exAiSettings);
 }
 
 function renderExAiMessages() {
-  exAiEls.messages.innerHTML = exAiMessages.map((message) => `
+  const history = exAiMessages.map((message) => `
     <article class="ex-ai-message ${message.role === "user" ? "me" : "ai"}">
       <div class="ex-ai-bubble">${escapeHtml(message.content)}</div>
     </article>
   `).join("");
+  const loading = exAiBusy ? `
+    <article class="ex-ai-message ai loading">
+      <div class="ex-ai-bubble"><span></span><span></span><span></span></div>
+    </article>
+  ` : "";
+  exAiEls.messages.innerHTML = history + loading;
   exAiEls.messages.scrollTop = exAiEls.messages.scrollHeight;
 }
 
 function setAiBusy(isBusy) {
-  exAiEls.form.querySelector("button").disabled = isBusy;
+  exAiBusy = isBusy;
   exAiEls.input.disabled = isBusy;
-  exAiEls.status.textContent = isBusy ? "林澈正在回复..." : "固定单人角色";
-}
-
-exAiEls.save?.addEventListener("click", () => {
-  collectPersonaForm();
-  showExAiToast("补充内容已保存，下一次回复会参考");
-});
-
-exAiEls.clear?.addEventListener("click", () => {
-  if (!confirm("确定清空当前 AI 聊天记录吗？")) return;
-  exAiMessages = [{
-    role: "assistant",
-    content: "清掉了。\n重新说吧，我听着。"
-  }];
-  saveJson(exAiKeys.messages, exAiMessages);
   renderExAiMessages();
-});
+}
 
 exAiEls.form?.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (exAiBusy) return;
   const content = exAiEls.input.value.trim();
   if (!content) return;
 
-  collectPersonaForm();
+  rememberFromUserMessage(content);
+  refreshPersonaFromMemory();
   exAiMessages.push({ role: "user", content });
+  saveJson(exAiKeys.messages, exAiMessages);
   exAiEls.input.value = "";
+  autoResizeInput();
   renderExAiMessages();
   setAiBusy(true);
 
@@ -151,13 +129,12 @@ exAiEls.form?.addEventListener("submit", async (event) => {
       body: JSON.stringify({
         profile: exAiPersona,
         settings: exAiSettings,
-        messages: exAiMessages.slice(-24)
+        messages: exAiMessages.slice(-40)
       })
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "AI 回复失败");
     exAiMessages.push({ role: "assistant", content: data.reply });
-    if (data.localMode) showExAiToast("当前使用本地林澈角色回复，可直接聊天");
   } catch (error) {
     exAiMessages.push({
       role: "assistant",
@@ -170,12 +147,30 @@ exAiEls.form?.addEventListener("submit", async (event) => {
   }
 });
 
-function showExAiToast(message) {
-  if (!exAiEls.toast) return;
-  exAiEls.toast.textContent = message;
-  exAiEls.toast.classList.remove("hidden");
-  clearTimeout(showExAiToast.timer);
-  showExAiToast.timer = setTimeout(() => exAiEls.toast.classList.add("hidden"), 2400);
+exAiEls.input?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    exAiEls.form.requestSubmit();
+  }
+});
+
+exAiEls.input?.addEventListener("input", autoResizeInput);
+
+function autoResizeInput() {
+  if (!exAiEls.input) return;
+  exAiEls.input.style.height = "auto";
+  exAiEls.input.style.height = `${Math.min(exAiEls.input.scrollHeight, 132)}px`;
+}
+
+function rememberFromUserMessage(content) {
+  const text = String(content || "").trim().replace(/\s+/g, " ");
+  if (!text) return;
+  const shouldRemember = /记住|以后|我喜欢|我不喜欢|我讨厌|我怕|我叫|我是|我在|我家|我的|生日|纪念日|别忘|你要知道|我习惯|我希望/.test(text);
+  if (!shouldRemember) return;
+  const normalized = text.slice(0, 220);
+  if (exAiLongMemories.some((item) => item.text === normalized)) return;
+  exAiLongMemories.push({ text: normalized, at: new Date().toISOString() });
+  saveJson(exAiKeys.memories, exAiLongMemories);
 }
 
 function escapeHtml(value) {
@@ -188,5 +183,6 @@ function escapeHtml(value) {
   }[char]));
 }
 
-fillPersonaForm();
+refreshPersonaFromMemory();
 renderExAiMessages();
+autoResizeInput();
