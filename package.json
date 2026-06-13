@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "check": "node --check server.js && node --check main.js && node --check admin.js && node --check download.js && node --check service-worker.js"
+    "check": "node --check server.js && node --check main.js && node --check admin.js && node --check download.js && node --check ex-ai.js && node --check service-worker.js"
   },
   "keywords": [
     "大学生交友",

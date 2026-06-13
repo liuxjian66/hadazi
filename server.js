@@ -28,6 +28,9 @@ const PLAZA_RETENTION_DAYS = 7;
 const DEFAULT_GROUP_ID = "group_public";
 const DEFAULT_GROUP_NAME = "校园大厅";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "18045461800";
+const AI_API_KEY = process.env.AI_API_KEY || "";
+const AI_API_BASE = process.env.AI_API_BASE || "https://api.deepseek.com/v1";
+const AI_MODEL = process.env.AI_MODEL || "deepseek-chat";
 
 const mbtiPairs = {
   INTJ: ["ENFP", "ENTP", "INFJ", "INTP"],
@@ -73,6 +76,10 @@ function writeDb(data) {
 
 function safeText(value, fallback = "") {
   return String(value || fallback).trim().slice(0, 500);
+}
+
+function safeLongText(value, max = 8000) {
+  return String(value || "").trim().slice(0, max);
 }
 
 function isFresh(value, days) {
@@ -658,6 +665,113 @@ function asyncRoute(handler) {
   return (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
 }
 
+function normalizeAiProfile(body = {}) {
+  return {
+    name: safeText(body.name, "小美").slice(0, 24),
+    relation: safeLongText(body.relation, 600),
+    tags: safeLongText(body.tags, 800),
+    memories: safeLongText(body.memories, 8000),
+    supplement: safeLongText(body.supplement, 3000),
+    corrections: safeLongText(body.corrections, 3000)
+  };
+}
+
+function normalizeAiMessages(messages = []) {
+  return (Array.isArray(messages) ? messages : [])
+    .filter((message) => ["user", "assistant"].includes(message?.role) && safeLongText(message?.content, 1))
+    .slice(-24)
+    .map((message) => ({
+      role: message.role,
+      content: safeLongText(message.content, 1200)
+    }));
+}
+
+function buildExAiSystemPrompt(profile) {
+  return `你是一个角色聊天 AI。请基于 ex-skill 的思路工作：Part A 是共同记忆，Part B 是 Persona。
+
+重要边界：
+- 你是在模拟一个由用户提供资料构建的聊天角色，不要声称自己是真实本人。
+- 不要跳出角色解释模型原理。
+- 回复要像聊天消息，不要写长篇分析。
+- 如果资料不足，可以自然地模糊处理，不要编造重大事实。
+- Correction 规则优先级最高。
+
+角色名称：${profile.name}
+关系信息：
+${profile.relation || "（暂未补充）"}
+
+性格标签：
+${profile.tags || "（暂未补充）"}
+
+共同记忆 / 聊天记录 / 偏好：
+${profile.memories || "（暂未补充）"}
+
+临时文字补充：
+${profile.supplement || "（暂未补充）"}
+
+Correction 纠正规则：
+${profile.corrections || "（暂无）"}
+
+请按以下层级生成回复：
+1. 先遵守 Correction 纠正规则。
+2. 再遵守核心性格和说话方式。
+3. 能用共同记忆时自然带一点细节。
+4. 情绪要真实，允许短句、停顿、撒娇、嘴硬、冷淡等，但要符合资料。
+5. 每次回复 1 到 4 句，像手机聊天，不要使用项目符号。`;
+}
+
+async function callExAi({ profile, messages, settings = {} }) {
+  const requestApiKey = safeLongText(settings.apiKey, 300);
+  const apiKey = requestApiKey || AI_API_KEY;
+  const apiBase = safeLongText(settings.apiBase, 300) || AI_API_BASE;
+  const model = safeText(settings.model, AI_MODEL).slice(0, 80);
+  if (!apiKey) {
+    return {
+      setupRequired: true,
+      reply: "AI 聊天页面已经接好了，但服务器还没有配置 AI_API_KEY。\n你可以先在右侧继续补充人物资料；等你给我 AI 接口 Key 后，我就能把它接成真正会回复的 AI。"
+    };
+  }
+
+  const endpoint = apiBase.endsWith("/chat/completions")
+    ? apiBase
+    : `${apiBase.replace(/\/$/, "")}/chat/completions`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0.85,
+        messages: [
+          { role: "system", content: buildExAiSystemPrompt(profile) },
+          ...messages
+        ]
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const err = new Error(data?.error?.message || data?.message || `AI 接口请求失败：${response.status}`);
+      err.status = 502;
+      throw err;
+    }
+    const reply = safeLongText(data?.choices?.[0]?.message?.content, 3000);
+    if (!reply) {
+      const err = new Error("AI 没有返回内容");
+      err.status = 502;
+      throw err;
+    }
+    return { reply };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 app.use(cors());
 app.use(express.json({ limit: "2mb" }));
 app.use(express.static(__dirname));
@@ -742,6 +856,15 @@ app.delete("/api/admin/messages/:id", requireAdmin, asyncRoute(async (req, res) 
 app.get("/api/people", asyncRoute(async (req, res) => {
   const currentUserId = safeText(req.query.exclude);
   res.json((await getPeople()).filter((person) => person.id !== currentUserId));
+}));
+
+app.post("/api/ai/ex-chat", asyncRoute(async (req, res) => {
+  const profile = normalizeAiProfile(req.body?.profile || {});
+  const messages = normalizeAiMessages(req.body?.messages || []);
+  if (!messages.length || messages[messages.length - 1].role !== "user") {
+    return res.status(400).json({ error: "请先输入要发送给 AI 的内容" });
+  }
+  res.json({ ok: true, ...(await callExAi({ profile, messages, settings: req.body?.settings || {} })) });
 }));
 
 app.post("/api/auth/phone", asyncRoute(async (req, res) => {

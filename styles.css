@@ -1150,6 +1150,173 @@ textarea:focus {
   background: rgba(23, 21, 41, 0.08);
 }
 
+.ex-ai-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  gap: 24px;
+  width: min(1440px, calc(100% - 32px));
+  min-height: calc(100vh - 48px);
+  margin: 24px auto;
+}
+
+.ex-ai-chat,
+.ex-ai-panel {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ex-ai-chat {
+  display: grid;
+  grid-template-rows: auto auto minmax(360px, 1fr) auto;
+  min-height: calc(100vh - 48px);
+}
+
+.ex-ai-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 26px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.ex-ai-status {
+  padding: 9px 13px;
+  border-radius: 999px;
+  color: var(--primary);
+  font-weight: 900;
+  background: rgba(109, 93, 252, 0.1);
+}
+
+.ex-ai-intro {
+  padding: 28px 32px;
+  border-bottom: 1px solid var(--line);
+}
+
+.ex-ai-intro h1 {
+  max-width: 900px;
+  margin: 0 0 12px;
+  font-size: clamp(36px, 5vw, 68px);
+  line-height: 0.98;
+  letter-spacing: -0.06em;
+}
+
+.ex-ai-intro p {
+  max-width: 760px;
+  margin: 0;
+  color: #5f5b75;
+  line-height: 1.8;
+}
+
+.ex-ai-messages {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-height: 0;
+  padding: 24px 32px;
+  overflow: auto;
+}
+
+.ex-ai-message {
+  display: flex;
+  width: 100%;
+}
+
+.ex-ai-message.me {
+  justify-content: flex-end;
+}
+
+.ex-ai-message.ai {
+  justify-content: flex-start;
+}
+
+.ex-ai-bubble {
+  max-width: min(720px, 82%);
+  padding: 15px 17px;
+  border-radius: 20px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.75;
+  box-shadow: 0 12px 34px rgba(72, 61, 139, 0.08);
+}
+
+.ex-ai-message.me .ex-ai-bubble {
+  color: #fff;
+  border-bottom-right-radius: 6px;
+  background: linear-gradient(135deg, var(--primary), #8f57ff);
+}
+
+.ex-ai-message.ai .ex-ai-bubble {
+  color: #312d4c;
+  border: 1px solid var(--line);
+  border-bottom-left-radius: 6px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.ex-ai-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 18px 22px;
+  border-top: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.ex-ai-form textarea {
+  resize: none;
+}
+
+.ex-ai-panel {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  max-height: calc(100vh - 48px);
+  padding: 24px;
+  overflow: auto;
+}
+
+.ex-ai-panel label {
+  display: grid;
+  gap: 8px;
+  color: #4d4866;
+  font-weight: 900;
+}
+
+.ex-ai-panel textarea {
+  resize: vertical;
+}
+
+.ex-ai-settings {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.ex-ai-settings summary {
+  color: var(--primary);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.ex-ai-settings label {
+  margin-top: 14px;
+}
+
+.ex-ai-settings p {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.ex-ai-tools {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 .toast {
   position: fixed;
   right: 24px;
@@ -2288,6 +2455,61 @@ body[data-page="groups"] .group-chat {
 
   .download-step-card {
     padding: 22px 18px;
+  }
+
+  .ex-ai-page {
+    grid-template-columns: 1fr;
+    width: min(100% - 20px, 430px);
+    min-height: auto;
+    gap: 14px;
+    margin: 10px auto 24px;
+  }
+
+  .ex-ai-chat {
+    grid-template-rows: auto auto minmax(360px, 58vh) auto;
+    min-height: auto;
+  }
+
+  .ex-ai-head {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 18px;
+  }
+
+  .ex-ai-intro {
+    padding: 20px 18px;
+  }
+
+  .ex-ai-intro h1 {
+    font-size: clamp(34px, 11vw, 52px);
+  }
+
+  .ex-ai-messages {
+    padding: 16px 14px;
+  }
+
+  .ex-ai-bubble {
+    max-width: 88%;
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+
+  .ex-ai-form {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+
+  .ex-ai-form .btn {
+    width: 100%;
+  }
+
+  .ex-ai-panel {
+    max-height: none;
+    padding: 18px;
+  }
+
+  .ex-ai-tools {
+    grid-template-columns: 1fr;
   }
 }
 
