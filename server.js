@@ -151,9 +151,7 @@ function readExAiState() {
   try {
     const state = normalizeExAiState(JSON.parse(fs.readFileSync(exAiStatePath, "utf8")));
     if (state.personaVersion !== CURRENT_EX_AI_PERSONA_VERSION) {
-      const fresh = getDefaultExAiState();
-      writeExAiState(fresh);
-      return fresh;
+      return writeExAiState({ ...state, personaVersion: CURRENT_EX_AI_PERSONA_VERSION });
     }
     return state;
   } catch {
@@ -1161,7 +1159,7 @@ app.get("/api/ai/ex-state", asyncRoute(async (req, res) => {
   res.json({ ok: true, ...readExAiState() });
 }));
 
-app.post("/api/ai/ex-state", asyncRoute(async (req, res) => {
+app.post("/api/ai/ex-state", requireAdmin, asyncRoute(async (req, res) => {
   const current = readExAiState();
   const incoming = normalizeExAiState({
     messages: Array.isArray(req.body?.messages) ? req.body.messages : current.messages,

@@ -118,31 +118,8 @@ function setAiBusy(isBusy) {
 async function loadSharedExAiState() {
   try {
     const data = await requestJson("/api/ai/ex-state");
-    const localMessages = loadJson(exAiKeys.messages, []);
-    const localMemories = loadJson(exAiKeys.memories, []);
-    const hasOnlyDefaultServerChat = Array.isArray(data.messages)
-      && data.messages.length === 1
-      && /有话就说/.test(data.messages[0]?.content || "");
-    const shouldMigrateLocal = !localStorage.getItem(exAiKeys.sharedMigrated)
-      && hasOnlyDefaultServerChat
-      && Array.isArray(localMessages)
-      && localMessages.length > 1;
-
-    if (shouldMigrateLocal) {
-      const migrated = await requestJson("/api/ai/ex-state", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: localMessages,
-          memories: localMemories
-        })
-      });
-      exAiMessages = migrated.messages || localMessages;
-      exAiLongMemories = migrated.memories || localMemories;
-    } else {
-      exAiMessages = data.messages || exAiMessages;
-      exAiLongMemories = data.memories || exAiLongMemories;
-    }
+    exAiMessages = data.messages || exAiMessages;
+    exAiLongMemories = data.memories || exAiLongMemories;
 
     localStorage.setItem(exAiKeys.sharedMigrated, "1");
     saveJson(exAiKeys.messages, exAiMessages);
