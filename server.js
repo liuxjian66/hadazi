@@ -105,7 +105,7 @@ function getDefaultExAiState() {
     messages: [
       {
         role: "assistant",
-        content: "我回来了。\n这次重新开始，之前那些都不算。",
+        content: "我在。\n有事就说。",
         at: new Date().toISOString()
       }
     ],
