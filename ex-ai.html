@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="HaDaZi 独立 AI 聊天页面，可接入 ex-skill 思路，通过人物资料、共同记忆和文字补充生成角色聊天。" />
+  <meta name="description" content="HaDaZi 独立 AI 女生聊天页面，固定外冷内热、清醒飒爽、嘴硬心软的人格，可继续文字补充。" />
   <meta name="theme-color" content="#6d5dfc" />
   <title>HaDaZi AI 聊天</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,15 +17,15 @@
       <header class="ex-ai-head">
         <a class="brand" href="index.html" aria-label="返回 HaDaZi 首页">
           <span class="brand-mark">AI</span>
-          <span><strong>AI 聊天</strong><small>接入 ex-skill 思路</small></span>
+          <span><strong>林澈</strong><small>外冷内热的清醒飒爽型 AI</small></span>
         </a>
-        <div class="ex-ai-status" id="aiStatus">可随时补充文字资料</div>
+        <div class="ex-ai-status" id="aiStatus">固定单人角色</div>
       </header>
 
       <div class="ex-ai-intro">
-        <p class="eyebrow">独立 AI 聊天入口</p>
-        <h1>边聊边补充，让 AI 更像你想要的角色</h1>
-        <p>右侧填写人物性格、共同记忆、聊天记录或临时纠正，发送消息时会一起交给 AI 参考。</p>
+        <p class="eyebrow">独立 AI 女生</p>
+        <h1>外冷内热，清醒飒爽，嘴硬心软</h1>
+        <p>她不甜腻、不黏人，有自己的生活节奏。你可以直接聊天，也可以在右侧继续补充她的细节和纠正规则。</p>
       </div>
 
       <div id="aiMessages" class="ex-ai-messages"></div>
@@ -38,29 +38,29 @@
 
     <aside class="ex-ai-panel section">
       <div class="section-head compact">
-        <p class="eyebrow">文字补充</p>
-        <h2>角色资料</h2>
-        <p>这些内容会作为 Persona 和 Memories 传给 AI，不会显示在普通用户网页里。</p>
+        <p class="eyebrow">固定角色</p>
+        <h2>林澈的人设</h2>
+        <p>核心人格已经固定好。你后面补充的文字会继续影响她的说话方式和记忆细节。</p>
       </div>
 
       <label>
         角色昵称
-        <input id="exName" type="text" placeholder="例如：小美" />
+        <input id="exName" type="text" placeholder="林澈" />
       </label>
 
       <label>
         关系信息
-        <input id="exRelation" type="text" placeholder="例如：大学同学，在一起三年，分开一年" />
+        <input id="exRelation" type="text" placeholder="可以写你和她是什么关系" />
       </label>
 
       <label>
         性格标签
-        <input id="exTags" type="text" placeholder="例如：ENFP、爱撒娇、嘴硬心软、容易翻旧账" />
+        <input id="exTags" type="text" placeholder="外冷内热、清醒飒爽、嘴硬心软" />
       </label>
 
       <label>
-        共同记忆 / 聊天记录
-        <textarea id="exMemories" rows="7" placeholder="可以粘贴聊天记录、她的口头禅、喜欢吃什么、你们常去哪里等。"></textarea>
+        核心人设 / 共同记忆
+        <textarea id="exMemories" rows="10" placeholder="这里会预置她的核心人设，也可以继续加共同记忆、口头禅、偏好。"></textarea>
       </label>
 
       <label>
