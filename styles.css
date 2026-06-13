@@ -536,6 +536,46 @@ textarea {
   gap: 16px;
 }
 
+.auth-form,
+.auth-status,
+.empty-card {
+  display: grid;
+  gap: 16px;
+}
+
+.auth-form {
+  grid-template-columns: 1.2fr repeat(3, minmax(160px, 1fr)) auto;
+  align-items: end;
+}
+
+.auth-form h3,
+.auth-status h3,
+.empty-card h3 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.auth-form p,
+.auth-status p,
+.empty-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.auth-status {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.empty-card {
+  grid-column: 1 / -1;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
 label {
   display: grid;
   gap: 8px;
@@ -966,6 +1006,16 @@ textarea:focus {
     min-height: auto;
   }
 
+  .auth-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .auth-form > div,
+  .auth-form button,
+  .auth-status {
+    grid-column: 1 / -1;
+  }
+
   .phone-demo {
     max-width: 480px;
     margin: 0 auto;
@@ -1002,6 +1052,7 @@ textarea:focus {
 
   .nav,
   .profile-grid,
+  .auth-form,
   .match-list,
   .contacts-list,
   .chat-layout,

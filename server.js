@@ -6,6 +6,7 @@ const http = require("http");
 const { Server } = require("socket.io");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const { createClient } = require("@supabase/supabase-js");
 
 const app = express();
@@ -19,6 +20,7 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 const useSupabase = Boolean(supabaseUrl && supabaseKey);
 const supabase = useSupabase ? createClient(supabaseUrl, supabaseKey) : null;
+const phonePattern = /^1[3-9]\d{9}$/;
 
 const mbtiPairs = {
   INTJ: ["ENFP", "ENTP", "INFJ", "INTP"],
@@ -39,152 +41,10 @@ const mbtiPairs = {
   ESFP: ["ISTJ", "ISFJ", "ESTP", "ESFJ"]
 };
 
-const seedPeople = [
-  {
-    id: "linxia",
-    name: "林夏",
-    mbti: "ENFP",
-    zodiac: "射手座",
-    school: "海城大学",
-    major: "新闻传播",
-    gender: "女",
-    age: 20,
-    birthday: "2005-12-06",
-    goal: "旅行搭子",
-    time: "周末白天",
-    interests: ["摄影", "City Walk", "Livehouse", "探店"],
-    bio: "喜欢记录生活，想找能一起拍照、看展和探索城市的朋友。",
-    greeting: "我看你也喜欢新鲜活动，周末要不要一起去市集？"
-  },
-  {
-    id: "chengmo",
-    name: "程墨",
-    mbti: "INTP",
-    zodiac: "水瓶座",
-    school: "北岸理工",
-    major: "人工智能",
-    gender: "男",
-    age: 21,
-    birthday: "2004-02-02",
-    goal: "游戏搭子",
-    time: "工作日晚上",
-    interests: ["编程", "桌游", "原神", "科幻电影"],
-    bio: "慢热但好聊，喜欢技术脑洞和策略游戏。",
-    greeting: "你平时玩什么游戏？可以一起开黑或者聊点技术脑洞。"
-  },
-  {
-    id: "qiyue",
-    name: "祁月",
-    mbti: "ISFJ",
-    zodiac: "巨蟹座",
-    school: "海城大学",
-    major: "临床医学",
-    gender: "女",
-    age: 22,
-    birthday: "2003-07-01",
-    goal: "学习搭子",
-    time: "每天都可以",
-    interests: ["自习", "咖啡", "纪录片", "慢跑"],
-    bio: "想找固定自习搭子，互相监督，也可以一起吃饭。",
-    greeting: "我最近在图书馆三楼自习，你有固定学习时间吗？"
-  },
-  {
-    id: "haoran",
-    name: "浩然",
-    mbti: "ESTP",
-    zodiac: "白羊座",
-    school: "东湖学院",
-    major: "体育教育",
-    gender: "男",
-    age: 20,
-    birthday: "2005-04-03",
-    goal: "运动搭子",
-    time: "周末晚上",
-    interests: ["篮球", "健身", "骑行", "桌球"],
-    bio: "行动派，喜欢运动和线下活动，想找长期球友。",
-    greeting: "你喜欢运动的话，周五晚上一起打球？"
-  },
-  {
-    id: "nanzhi",
-    name: "南栀",
-    mbti: "INFP",
-    zodiac: "双鱼座",
-    school: "海城艺术学院",
-    major: "视觉传达",
-    gender: "女",
-    age: 19,
-    birthday: "2006-03-08",
-    goal: "饭搭子",
-    time: "周末白天",
-    interests: ["插画", "电影", "甜品", "猫"],
-    bio: "喜欢安静但不无聊的相处，想找一起探店和看电影的朋友。",
-    greeting: "你喜欢甜品吗？我收藏了几家很适合拍照的小店。"
-  },
-  {
-    id: "yuchen",
-    name: "俞辰",
-    mbti: "ENTJ",
-    zodiac: "狮子座",
-    school: "南川大学",
-    major: "工商管理",
-    gender: "男",
-    age: 22,
-    birthday: "2003-08-12",
-    goal: "学习搭子",
-    time: "工作日晚上",
-    interests: ["创业", "辩论", "健身", "效率工具"],
-    bio: "目标感比较强，想找能一起备赛、做项目的伙伴。",
-    greeting: "我正在组一个商业案例比赛队伍，你有兴趣一起试试吗？"
-  }
-];
-
-const seedPosts = [
-  {
-    id: "post_linxia_1",
-    personId: "linxia",
-    time: "10 分钟前",
-    content: "今天下午想去老城区 City Walk，顺便拍几张校园写真，有没有同学一起？我可以帮你拍头像。",
-    tags: ["摄影", "City Walk", "周末搭子"],
-    likes: 42,
-    comments: ["想去！", "这个路线我熟", "可以带胶片机吗"],
-    photos: 3
-  },
-  {
-    id: "post_qiyue_1",
-    personId: "qiyue",
-    time: "28 分钟前",
-    content: "图书馆三楼靠窗位置真的很适合复习。想找一个长期自习搭子，互相打卡，不卷但别鸽。",
-    tags: ["自习", "考研", "学习搭子"],
-    likes: 36,
-    comments: ["我也在三楼", "求加入", "晚上还在吗"],
-    photos: 1
-  },
-  {
-    id: "post_haoran_1",
-    personId: "haoran",
-    time: "1 小时前",
-    content: "今晚 7 点东操场打半场，缺 2 个。新手也可以，主要是运动一下。",
-    tags: ["篮球", "运动搭子", "今晚"],
-    likes: 58,
-    comments: ["报名", "有女生局吗", "带水！"],
-    photos: 2
-  },
-  {
-    id: "post_nanzhi_1",
-    personId: "nanzhi",
-    time: "2 小时前",
-    content: "新开的甜品店试吃成功，适合聊天也适合拍照。想找一个周末饭搭子，慢慢认识也可以。",
-    tags: ["甜品", "饭搭子", "拍照"],
-    likes: 64,
-    comments: ["店名求私", "看起来好吃", "周末有空"],
-    photos: 3
-  }
-];
-
 function ensureDb() {
   if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
   if (!fs.existsSync(dbPath)) {
-    writeDb({ profiles: {}, people: seedPeople, posts: seedPosts, friends: {}, messages: [] });
+    writeDb({ profiles: {}, people: [], posts: [], friends: {}, messages: [] });
   }
 }
 
@@ -192,8 +52,8 @@ function readDb() {
   ensureDb();
   const db = JSON.parse(fs.readFileSync(dbPath, "utf8"));
   db.profiles ||= {};
-  db.people ||= seedPeople;
-  db.posts ||= seedPosts;
+  db.people ||= [];
+  db.posts ||= [];
   db.friends ||= {};
   db.messages ||= [];
   writeDb(db);
@@ -208,9 +68,20 @@ function safeText(value, fallback = "") {
   return String(value || fallback).trim().slice(0, 500);
 }
 
+function hashPassword(password) {
+  return crypto.createHash("sha256").update(String(password)).digest("hex");
+}
+
+function stripPrivateProfile(profile) {
+  if (!profile) return profile;
+  const { passwordHash, password, ...safeProfile } = profile;
+  return safeProfile;
+}
+
 function normalizeProfile(body) {
   return {
     id: safeText(body.id, `user_${Date.now()}`),
+    phone: safeText(body.phone, "").slice(0, 11),
     nickname: safeText(body.nickname, "我").slice(0, 16),
     gender: safeText(body.gender, "未设置").slice(0, 8),
     age: safeText(body.age, "").slice(0, 3),
@@ -221,6 +92,7 @@ function normalizeProfile(body) {
     goal: safeText(body.goal, "饭搭子").slice(0, 16),
     time: safeText(body.time, "周末白天").slice(0, 16),
     mbti: safeText(body.mbti, "").toUpperCase().slice(0, 4),
+    mbtiComplete: Boolean(body.mbtiComplete || safeText(body.mbti, "")),
     interests: Array.isArray(body.interests)
       ? body.interests.map((item) => safeText(item).slice(0, 20)).filter(Boolean).slice(0, 12)
       : [],
@@ -228,6 +100,35 @@ function normalizeProfile(body) {
     bio: safeText(body.bio, "想找合得来的校园搭子。").slice(0, 120),
     updatedAt: new Date().toISOString()
   };
+}
+
+function normalizeUserPerson(profile) {
+  return {
+    id: profile.id,
+    name: profile.nickname || "同学",
+    mbti: profile.mbti || "",
+    mbtiComplete: Boolean(profile.mbtiComplete && profile.mbti),
+    zodiac: profile.zodiac || "未设置",
+    school: profile.school || "我的大学",
+    major: profile.major || "未填写",
+    gender: profile.gender || "未设置",
+    age: profile.age || "",
+    birthday: profile.birthday || "",
+    goal: profile.goal || "饭搭子",
+    time: profile.time || "周末白天",
+    interests: Array.isArray(profile.interests) ? profile.interests : [],
+    bio: profile.bio || profile.resume || "想找合得来的校园搭子。",
+    greeting: "你好呀，我也在 HaDaZi 上找搭子。",
+    isRealUser: true,
+    updatedAt: profile.updatedAt || profile.updated_at || ""
+  };
+}
+
+async function getAllProfiles() {
+  if (!useSupabase) return Object.values(readDb().profiles || {});
+  const { data, error } = await supabase.from("profiles").select("id,data,updated_at").order("updated_at", { ascending: false });
+  if (error) throw error;
+  return data.map((row) => ({ id: row.id, ...(row.data || {}), updatedAt: row.updated_at }));
 }
 
 function normalizePost(body) {
@@ -255,10 +156,48 @@ function normalizeMessage(body) {
     id: safeText(body.id, `msg_${Date.now()}_${Math.random().toString(16).slice(2)}`),
     userId: safeText(body.userId),
     personId: safeText(body.personId),
-    from: body.from === "other" ? "other" : "me",
+    fromUserId: safeText(body.fromUserId, body.userId),
+    toUserId: safeText(body.toUserId, body.personId),
+    from: safeText(body.from, "me").slice(0, 16),
     text: safeText(body.text).slice(0, 500),
     time: new Date().toISOString()
   };
+}
+
+async function authByPhone(body) {
+  const phone = safeText(body.phone).replace(/\s/g, "");
+  const password = safeText(body.password).slice(0, 64);
+  const nickname = safeText(body.nickname, `用户${phone.slice(-4)}`).slice(0, 16);
+  if (!phonePattern.test(phone)) {
+    const err = new Error("请输入正确的中国大陆手机号");
+    err.status = 400;
+    throw err;
+  }
+  if (password.length < 6) {
+    const err = new Error("密码至少 6 位");
+    err.status = 400;
+    throw err;
+  }
+
+  const id = `phone_${phone}`;
+  const existing = await getProfile(id);
+  const passwordHash = hashPassword(password);
+  if (existing?.passwordHash && existing.passwordHash !== passwordHash) {
+    const err = new Error("手机号或密码不正确");
+    err.status = 401;
+    throw err;
+  }
+
+  const profile = normalizeProfile({
+    ...existing,
+    id,
+    phone,
+    nickname: existing?.nickname || nickname,
+    mbtiComplete: Boolean(existing?.mbti)
+  });
+  profile.passwordHash = existing?.passwordHash || passwordHash;
+  await saveProfile(profile);
+  return stripPrivateProfile(profile);
 }
 
 function calcMatch(profile, person) {
@@ -305,38 +244,29 @@ function fromRow(row) {
 }
 
 async function supabaseSelectPeople() {
-  const { data, error } = await supabase.from("people").select("id,data").order("id");
-  if (error) throw error;
-  if (!data.length) {
-    const rows = seedPeople.map((person) => ({ id: person.id, data: person }));
-    const { error: seedError } = await supabase.from("people").upsert(rows);
-    if (seedError) throw seedError;
-    return seedPeople;
-  }
-  return data.map(fromRow);
+  const profiles = await getAllProfiles();
+  return profiles.filter((profile) => profile.phone && profile.mbti).map(normalizeUserPerson);
 }
 
 async function getPeople() {
-  if (!useSupabase) return readDb().people;
+  if (!useSupabase) {
+    return Object.values(readDb().profiles || {})
+      .filter((profile) => profile.phone && profile.mbti)
+      .map(normalizeUserPerson);
+  }
   return supabaseSelectPeople();
 }
 
 async function getPosts() {
   if (!useSupabase) {
     const db = readDb();
-    return db.posts.map((post) => ({ ...post, person: db.people.find((person) => person.id === post.personId) || null }));
+    const people = await getPeople();
+    return db.posts.map((post) => ({ ...post, person: people.find((person) => person.id === post.personId) || null }));
   }
 
   const people = await getPeople();
   const { data, error } = await supabase.from("posts").select("id,data,created_at").order("created_at", { ascending: false });
   if (error) throw error;
-
-  if (!data.length) {
-    const rows = seedPosts.map((post) => ({ id: post.id, user_id: null, person_id: post.personId, data: post }));
-    const { error: seedError } = await supabase.from("posts").upsert(rows);
-    if (seedError) throw seedError;
-    return seedPosts.map((post) => ({ ...post, person: people.find((person) => person.id === post.personId) || null }));
-  }
 
   return data.map(fromRow).map((post) => ({
     ...post,
@@ -386,8 +316,9 @@ async function saveProfile(profile) {
 async function getFriends(userId) {
   if (!useSupabase) {
     const db = readDb();
+    const people = await getPeople();
     const friendIds = db.friends[userId] || [];
-    return friendIds.map((personId) => db.people.find((person) => person.id === personId)).filter(Boolean);
+    return friendIds.map((personId) => people.find((person) => person.id === personId)).filter(Boolean);
   }
 
   const people = await getPeople();
@@ -423,13 +354,15 @@ async function addFriend(userId, personId) {
 
 async function getMessages(userId, personId) {
   if (!useSupabase) {
-    return readDb().messages.filter((msg) => msg.userId === userId && msg.personId === personId);
+    return readDb().messages.filter((msg) => (
+      (msg.userId === userId && msg.personId === personId) ||
+      (msg.userId === personId && msg.personId === userId)
+    ));
   }
   const { data, error } = await supabase
     .from("messages")
     .select("id,data,created_at")
-    .eq("user_id", userId)
-    .eq("person_id", personId)
+    .or(`and(user_id.eq.${userId},person_id.eq.${personId}),and(user_id.eq.${personId},person_id.eq.${userId})`)
     .order("created_at", { ascending: true });
   if (error) throw error;
   return data.map(fromRow);
@@ -464,7 +397,13 @@ app.get("/api/health", (req, res) => {
 });
 
 app.get("/api/people", asyncRoute(async (req, res) => {
-  res.json(await getPeople());
+  const currentUserId = safeText(req.query.exclude);
+  res.json((await getPeople()).filter((person) => person.id !== currentUserId));
+}));
+
+app.post("/api/auth/phone", asyncRoute(async (req, res) => {
+  const user = await authByPhone(req.body);
+  res.json({ ok: true, userId: user.id, profile: user });
 }));
 
 app.get("/api/posts", asyncRoute(async (req, res) => {
@@ -487,17 +426,26 @@ app.post("/api/friends", asyncRoute(async (req, res) => {
 }));
 
 app.get("/api/profile/:id", asyncRoute(async (req, res) => {
-  res.json(await getProfile(req.params.id));
+  res.json(stripPrivateProfile(await getProfile(req.params.id)));
 }));
 
 app.post("/api/profile", asyncRoute(async (req, res) => {
-  res.json(await saveProfile(normalizeProfile(req.body)));
+  const incoming = normalizeProfile(req.body);
+  const existing = await getProfile(incoming.id);
+  const profile = {
+    ...incoming,
+    phone: existing?.phone || incoming.phone,
+    passwordHash: existing?.passwordHash
+  };
+  res.json(stripPrivateProfile(await saveProfile(profile)));
 }));
 
 app.get("/api/matches/:id", asyncRoute(async (req, res) => {
   const profile = await getProfile(req.params.id);
-  if (!profile) return res.status(404).json({ error: "请先保存个人资料" });
+  if (!profile) return res.status(404).json({ error: "请先用手机号登录或注册" });
+  if (!profile.mbti) return res.status(403).json({ error: "做完 MBTI 并保存个人资料后才能匹配唠嗑" });
   const matches = (await getPeople())
+    .filter((person) => person.id !== profile.id && person.mbtiComplete)
     .map((person) => ({ ...person, match: calcMatch(profile, person) }))
     .sort((a, b) => b.match.score - a.match.score);
   res.json(matches);
@@ -514,9 +462,13 @@ app.post("/api/messages", asyncRoute(async (req, res) => {
 
   const message = normalizeMessage(req.body);
   if (!message.userId || !message.text) return res.status(400).json({ error: "消息内容不能为空" });
+  const senderProfile = await getProfile(message.userId);
+  if (!senderProfile?.phone) return res.status(401).json({ error: "请先用手机号登录或注册" });
+  if (!senderProfile?.mbti) return res.status(403).json({ error: "做完 MBTI 并保存个人资料后才能匹配唠嗑" });
 
   const saved = await saveMessage(message);
   io.to(saved.userId).emit("chat:message", saved);
+  io.to(saved.personId).emit("chat:message", saved);
   res.json(saved);
 }));
 
@@ -529,8 +481,14 @@ io.on("connection", (socket) => {
     try {
       const message = normalizeMessage(payload);
       if (!message.userId || !message.personId || !message.text) return;
+      const senderProfile = await getProfile(message.userId);
+      if (!senderProfile?.phone || !senderProfile?.mbti) {
+        socket.emit("chat:error", { error: "做完 MBTI 并保存个人资料后才能匹配唠嗑" });
+        return;
+      }
       const saved = await saveMessage(message);
       io.to(saved.userId).emit("chat:message", saved);
+      io.to(saved.personId).emit("chat:message", saved);
     } catch (error) {
       socket.emit("chat:error", { error: error.message });
     }
