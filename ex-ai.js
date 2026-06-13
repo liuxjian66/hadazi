@@ -2,7 +2,8 @@ const exAiKeys = {
   persona: "hadaziExAiPersonaLinCheV2",
   messages: "hadaziExAiMessagesLinCheV2",
   settings: "hadaziExAiSettings",
-  memories: "hadaziExAiLongMemoriesLinCheV1"
+  memories: "hadaziExAiLongMemoriesLinCheV1",
+  sharedMigrated: "hadaziExAiSharedMigratedV1"
 };
 
 const fixedGirlPersona = {
@@ -50,6 +51,7 @@ let exAiSettings = {
   apiKey: ""
 };
 let exAiBusy = false;
+let exAiLoaded = false;
 
 function loadJson(key, fallback) {
   try {
@@ -63,6 +65,13 @@ function saveJson(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+async function requestJson(url, options = {}) {
+  const response = await fetch(url, options);
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "请求失败");
+  return data;
+}
+
 function buildMemoryText() {
   const memoryLines = exAiLongMemories
     .slice(-80)
@@ -70,7 +79,7 @@ function buildMemoryText() {
     .join("\n");
   return [
     fixedGirlPersona.memories,
-    memoryLines ? `\n长期记忆（来自用户本地浏览器保存的聊天记录，后续对话要自然呼应）：\n${memoryLines}` : "",
+    memoryLines ? `\n长期记忆（所有设备共享，后续对话要自然呼应）：\n${memoryLines}` : "",
     "\n互动要求：这是恋人式长期相处，不要像客服。用户让你记住的新信息，要在之后自然使用。"
   ].join("");
 }
@@ -107,9 +116,51 @@ function setAiBusy(isBusy) {
   renderExAiMessages();
 }
 
+async function loadSharedExAiState() {
+  try {
+    const data = await requestJson("/api/ai/ex-state");
+    const localMessages = loadJson(exAiKeys.messages, []);
+    const localMemories = loadJson(exAiKeys.memories, []);
+    const hasOnlyDefaultServerChat = Array.isArray(data.messages)
+      && data.messages.length === 1
+      && /有话就说/.test(data.messages[0]?.content || "");
+    const shouldMigrateLocal = !localStorage.getItem(exAiKeys.sharedMigrated)
+      && hasOnlyDefaultServerChat
+      && Array.isArray(localMessages)
+      && localMessages.length > 1;
+
+    if (shouldMigrateLocal) {
+      const migrated = await requestJson("/api/ai/ex-state", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: localMessages,
+          memories: localMemories
+        })
+      });
+      exAiMessages = migrated.messages || localMessages;
+      exAiLongMemories = migrated.memories || localMemories;
+    } else {
+      exAiMessages = data.messages || exAiMessages;
+      exAiLongMemories = data.memories || exAiLongMemories;
+    }
+
+    localStorage.setItem(exAiKeys.sharedMigrated, "1");
+    saveJson(exAiKeys.messages, exAiMessages);
+    saveJson(exAiKeys.memories, exAiLongMemories);
+  } catch {
+    exAiMessages = loadJson(exAiKeys.messages, exAiMessages);
+    exAiLongMemories = loadJson(exAiKeys.memories, exAiLongMemories);
+  } finally {
+    exAiLoaded = true;
+    refreshPersonaFromMemory();
+    renderExAiMessages();
+  }
+}
+
 exAiEls.form?.addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (exAiBusy) return;
+  if (exAiBusy || !exAiLoaded) return;
   const content = exAiEls.input.value.trim();
   if (!content) return;
 
@@ -123,18 +174,15 @@ exAiEls.form?.addEventListener("submit", async (event) => {
   setAiBusy(true);
 
   try {
-    const response = await fetch("/api/ai/ex-chat", {
+    const data = await requestJson("/api/ai/ex-send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        profile: exAiPersona,
-        settings: exAiSettings,
-        messages: exAiMessages.slice(-40)
+        content
       })
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "AI 回复失败");
-    exAiMessages.push({ role: "assistant", content: data.reply });
+    exAiMessages = data.messages || exAiMessages;
+    exAiLongMemories = data.memories || exAiLongMemories;
   } catch (error) {
     exAiMessages.push({
       role: "assistant",
@@ -186,3 +234,4 @@ function escapeHtml(value) {
 refreshPersonaFromMemory();
 renderExAiMessages();
 autoResizeInput();
+loadSharedExAiState();

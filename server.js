@@ -17,6 +17,7 @@ const PORT = process.env.PORT || 3000;
 const dbDir = path.join(__dirname, "data");
 const dbPath = path.join(dbDir, "db.json");
 const aiConfigPath = path.join(dbDir, "ai-config.json");
+const exAiStatePath = path.join(dbDir, "ex-ai-state.json");
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 const useSupabase = Boolean(supabaseUrl && supabaseKey);
@@ -95,6 +96,65 @@ function writeAiConfig(config) {
   };
   fs.writeFileSync(aiConfigPath, JSON.stringify(safeConfig, null, 2), "utf8");
   return safeConfig;
+}
+
+function getDefaultExAiState() {
+  return {
+    messages: [
+      {
+        role: "assistant",
+        content: "嗯，来了。\n有话就说，别绕太远。",
+        at: new Date().toISOString()
+      }
+    ],
+    memories: [],
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function normalizeExAiState(state = {}) {
+  const fallback = getDefaultExAiState();
+  const messages = (Array.isArray(state.messages) ? state.messages : fallback.messages)
+    .filter((message) => ["user", "assistant"].includes(message?.role) && safeLongText(message?.content, 1))
+    .slice(-500)
+    .map((message) => ({
+      role: message.role,
+      content: safeLongText(message.content, 1200),
+      at: safeText(message.at, new Date().toISOString()).slice(0, 40)
+    }));
+  const memories = (Array.isArray(state.memories) ? state.memories : [])
+    .filter((item) => safeLongText(item?.text || item, 1))
+    .slice(-200)
+    .map((item) => ({
+      text: safeLongText(item.text || item, 260),
+      at: safeText(item.at, new Date().toISOString()).slice(0, 40)
+    }));
+  return {
+    messages: messages.length ? messages : fallback.messages,
+    memories,
+    updatedAt: safeText(state.updatedAt, new Date().toISOString()).slice(0, 40)
+  };
+}
+
+function readExAiState() {
+  ensureDb();
+  if (!fs.existsSync(exAiStatePath)) {
+    const initial = getDefaultExAiState();
+    writeExAiState(initial);
+    return initial;
+  }
+  try {
+    return normalizeExAiState(JSON.parse(fs.readFileSync(exAiStatePath, "utf8")));
+  } catch {
+    return getDefaultExAiState();
+  }
+}
+
+function writeExAiState(state) {
+  ensureDb();
+  const safeState = normalizeExAiState({ ...state, updatedAt: new Date().toISOString() });
+  fs.writeFileSync(exAiStatePath, JSON.stringify(safeState, null, 2), "utf8");
+  return safeState;
 }
 
 function safeText(value, fallback = "") {
@@ -721,6 +781,38 @@ function normalizeAiMessages(messages = []) {
     }));
 }
 
+function buildExAiMemoryText(memories = []) {
+  return (Array.isArray(memories) ? memories : [])
+    .slice(-100)
+    .map((item) => `- ${safeLongText(item.text || item, 260)}`)
+    .filter((line) => line.length > 2)
+    .join("\n");
+}
+
+function rememberFromExAiUserMessage(content, memories = []) {
+  const text = safeLongText(content, 260).replace(/\s+/g, " ");
+  if (!text) return memories;
+  const shouldRemember = /记住|以后|我喜欢|我不喜欢|我讨厌|我怕|我叫|我是|我在|我家|我的|生日|纪念日|别忘|你要知道|我习惯|我希望/.test(text);
+  if (!shouldRemember) return memories;
+  if (memories.some((item) => item.text === text)) return memories;
+  return [...memories, { text, at: new Date().toISOString() }].slice(-200);
+}
+
+function buildSharedExAiProfile(memories = []) {
+  const memoryText = buildExAiMemoryText(memories);
+  return normalizeAiProfile({
+    ...FIXED_EX_AI_PERSONA,
+    relation: "恋人关系里的林澈。她外冷内热、清醒飒爽，不甜腻不黏人，有自己的原则、生活节奏和边界感。",
+    memories: [
+      FIXED_EX_AI_PERSONA.memories,
+      memoryText ? `\n长期记忆（所有设备共享，后续对话要自然呼应）：\n${memoryText}` : "",
+      "\n互动要求：这是恋人式长期相处，不要像客服。用户让你记住的新信息，要在之后自然使用。"
+    ].join(""),
+    supplement: memories.slice(-24).map((item) => item.text).join("\n"),
+    corrections: "始终保持恋人设定：外冷内热、清醒飒爽、嘴硬心软；不甜腻、不黏糊、不恋爱脑；回复像手机聊天，简洁克制、有松弛感。根据用户情绪自然调整语气，难受时少怼多兜底，轻松时可以轻调侃。"
+  });
+}
+
 function buildExAiSystemPrompt(profile) {
   return `你是一个固定单人角色聊天 AI。请基于 ex-skill 的思路工作：Part A 是共同记忆，Part B 是 Persona。
 
@@ -1032,6 +1124,48 @@ app.post("/api/ai/ex-chat", asyncRoute(async (req, res) => {
     return res.status(400).json({ error: "请先输入要发送给 AI 的内容" });
   }
   res.json({ ok: true, ...(await callExAi({ profile, messages, settings: req.body?.settings || {} })) });
+}));
+
+app.get("/api/ai/ex-state", asyncRoute(async (req, res) => {
+  res.json({ ok: true, ...readExAiState() });
+}));
+
+app.post("/api/ai/ex-state", asyncRoute(async (req, res) => {
+  const current = readExAiState();
+  const incoming = normalizeExAiState({
+    messages: Array.isArray(req.body?.messages) ? req.body.messages : current.messages,
+    memories: Array.isArray(req.body?.memories) ? req.body.memories : current.memories
+  });
+  res.json({ ok: true, ...writeExAiState(incoming) });
+}));
+
+app.post("/api/ai/ex-send", asyncRoute(async (req, res) => {
+  const content = safeLongText(req.body?.content, 1200);
+  if (!content) return res.status(400).json({ error: "请先输入要发送给 AI 的内容" });
+  const current = readExAiState();
+  const userMessage = { role: "user", content, at: new Date().toISOString() };
+  const memories = rememberFromExAiUserMessage(content, current.memories || []);
+  const messagesForAi = normalizeAiMessages([...current.messages, userMessage]);
+  const result = await callExAi({
+    profile: buildSharedExAiProfile(memories),
+    messages: messagesForAi,
+    settings: {}
+  });
+  const assistantMessage = {
+    role: "assistant",
+    content: safeLongText(result.reply, 1200),
+    at: new Date().toISOString()
+  };
+  const state = writeExAiState({
+    messages: [...current.messages, userMessage, assistantMessage],
+    memories
+  });
+  res.json({
+    ok: true,
+    localMode: Boolean(result.localMode),
+    reply: assistantMessage.content,
+    ...state
+  });
 }));
 
 app.post("/api/auth/phone", asyncRoute(async (req, res) => {
