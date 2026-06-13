@@ -33,7 +33,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "18045461800";
 const AI_API_KEY = process.env.AI_API_KEY || "";
 const AI_API_BASE = process.env.AI_API_BASE || "https://api.deepseek.com";
 const AI_MODEL = process.env.AI_MODEL || "deepseek-v4-flash";
-const CURRENT_EX_AI_PERSONA_VERSION = "xu-zhi-hot-love-v1";
+const CURRENT_EX_AI_PERSONA_VERSION = "xu-zhi-cool-sync-v2";
 
 const mbtiPairs = {
   INTJ: ["ENFP", "ENTP", "INFJ", "INTP"],

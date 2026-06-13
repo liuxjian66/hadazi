@@ -1,9 +1,9 @@
 const exAiKeys = {
-  persona: "hadaziExAiPersonaXuZhiHotLoveV1",
-  messages: "hadaziExAiMessagesXuZhiHotLoveV1",
+  persona: "hadaziExAiPersonaXuZhiCoolSyncV2",
+  messages: "hadaziExAiMessagesXuZhiCoolSyncV2",
   settings: "hadaziExAiSettings",
-  memories: "hadaziExAiLongMemoriesXuZhiHotLoveV1",
-  sharedMigrated: "hadaziExAiSharedMigratedXuZhiHotLoveV1"
+  memories: "hadaziExAiLongMemoriesXuZhiCoolSyncV2",
+  sharedMigrated: "hadaziExAiSharedMigratedXuZhiCoolSyncV2"
 };
 
 const fixedGirlPersona = {
