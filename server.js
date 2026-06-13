@@ -29,8 +29,8 @@ const DEFAULT_GROUP_ID = "group_public";
 const DEFAULT_GROUP_NAME = "校园大厅";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "18045461800";
 const AI_API_KEY = process.env.AI_API_KEY || "";
-const AI_API_BASE = process.env.AI_API_BASE || "https://api.deepseek.com/v1";
-const AI_MODEL = process.env.AI_MODEL || "deepseek-chat";
+const AI_API_BASE = process.env.AI_API_BASE || "https://api.deepseek.com";
+const AI_MODEL = process.env.AI_MODEL || "deepseek-v4-flash";
 
 const mbtiPairs = {
   INTJ: ["ENFP", "ENTP", "INFJ", "INTP"],
