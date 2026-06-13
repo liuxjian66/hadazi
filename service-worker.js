@@ -1,4 +1,4 @@
-const CACHE_NAME = "hadazi-pwa-v11";
+const CACHE_NAME = "hadazi-pwa-v12";
 const STATIC_ASSETS = [
   "/",
   "/index.html",

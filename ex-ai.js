@@ -38,7 +38,7 @@ let exAiPersona = { ...fixedGirlPersona, ...loadJson(exAiKeys.persona, {}) };
 let exAiMessages = loadJson(exAiKeys.messages, [
   {
     role: "assistant",
-    content: "我在。\n有事就说。"
+    content: "徐栀。\n刚加上，先认个脸。\n有事直接说，别绕太远。"
   }
 ]);
 let exAiLongMemories = loadJson(exAiKeys.memories, []);
