@@ -13,6 +13,40 @@ const resetDevKey = "hadaziLastResetCode";
 const backendEnabled = location.protocol.startsWith("http");
 const GROUP_ID = "group_public";
 const DAY = 24 * 60 * 60 * 1000;
+let deferredInstallPrompt = null;
+
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js").catch(() => {});
+  });
+}
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  renderInstallButton();
+});
+
+window.addEventListener("appinstalled", () => {
+  deferredInstallPrompt = null;
+  document.querySelector(".install-app-btn")?.remove();
+});
+
+function renderInstallButton() {
+  if (!deferredInstallPrompt || document.querySelector(".install-app-btn")) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "install-app-btn";
+  button.textContent = "安装 App";
+  button.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice.catch(() => null);
+    deferredInstallPrompt = null;
+    button.remove();
+  });
+  document.body.appendChild(button);
+}
 
 const zodiacList = [
   "白羊座", "金牛座", "双子座", "巨蟹座", "狮子座", "处女座",
