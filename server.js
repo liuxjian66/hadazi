@@ -133,7 +133,7 @@ function normalizeExAiState(state = {}) {
       at: safeText(item.at, new Date().toISOString()).slice(0, 40)
     }));
   return {
-    personaVersion: safeText(state.personaVersion, CURRENT_EX_AI_PERSONA_VERSION).slice(0, 60),
+    personaVersion: state.personaVersion ? safeText(state.personaVersion).slice(0, 60) : "",
     messages: messages.length ? messages : fallback.messages,
     memories,
     lastProactiveAt: safeText(state.lastProactiveAt, "").slice(0, 40),
