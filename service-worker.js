@@ -1,7 +1,8 @@
-const CACHE_NAME = "hadazi-pwa-v1";
+const CACHE_NAME = "hadazi-pwa-v2";
 const STATIC_ASSETS = [
   "/",
   "/index.html",
+  "/download.html",
   "/contacts.html",
   "/chat.html",
   "/groups.html",
@@ -10,6 +11,7 @@ const STATIC_ASSETS = [
   "/profile.html",
   "/styles.css",
   "/main.js",
+  "/download.js",
   "/manifest.webmanifest",
   "/assets/icons/icon-192.png",
   "/assets/icons/icon-512.png"

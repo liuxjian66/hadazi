@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="下载 HaDaZi 校园搭子 App，将网站添加到手机桌面，像 App 一样打开使用。" />
+  <meta name="theme-color" content="#6d5dfc" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="HaDaZi" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>下载 HaDaZi App</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="download">
+  <main class="download-page">
+    <section class="download-hero section">
+      <a class="brand download-brand" href="index.html" aria-label="返回 HaDaZi 首页">
+        <span class="brand-mark">HD</span>
+        <span><strong>HaDaZi</strong><small>大学生搭子交友</small></span>
+      </a>
+
+      <div class="download-hero-grid">
+        <div class="download-copy">
+          <p class="eyebrow">手机下载入口</p>
+          <h1>把 HaDaZi 安装到手机桌面</h1>
+          <p>不用应用商店，手机浏览器打开这个页面后，按提示添加到主屏幕，就能像 App 一样全屏启动。</p>
+          <div class="download-actions">
+            <button id="installNowBtn" class="btn primary download-install-btn" type="button">立即安装 App</button>
+            <button id="copyLinkBtn" class="btn ghost" type="button">复制下载链接</button>
+            <a class="btn subtle" href="index.html">先进入网站</a>
+          </div>
+          <p id="installHint" class="download-hint">如果按钮暂时没有弹出安装窗口，请按下面的手机教程操作。</p>
+        </div>
+
+        <div class="phone-preview" aria-label="HaDaZi 手机预览">
+          <div class="phone-top"></div>
+          <div class="phone-card app-icon-card">
+            <img src="/assets/icons/icon-192.png" alt="HaDaZi App 图标" />
+            <strong>HaDaZi</strong>
+            <span>校园搭子交友</span>
+          </div>
+          <div class="phone-card mini-card purple">匹配朋友</div>
+          <div class="phone-card mini-card pink">大厅聊天</div>
+          <div class="phone-card mini-card green">广场动态</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="download-steps">
+      <article class="section download-step-card">
+        <span class="step-badge">Android</span>
+        <h2>安卓手机下载</h2>
+        <p>推荐使用 Chrome、Edge 或手机自带浏览器打开本页。</p>
+        <ol>
+          <li>点击上方“立即安装 App”。</li>
+          <li>如果没有弹窗，点浏览器右上角菜单。</li>
+          <li>选择“安装 App”或“添加到主屏幕”。</li>
+        </ol>
+      </article>
+
+      <article class="section download-step-card">
+        <span class="step-badge apple">iPhone</span>
+        <h2>苹果手机下载</h2>
+        <p>iPhone 需要用 Safari 浏览器打开本页。</p>
+        <ol>
+          <li>点击 Safari 底部的分享按钮。</li>
+          <li>选择“添加到主屏幕”。</li>
+          <li>确认名称为 HaDaZi 后点“添加”。</li>
+        </ol>
+      </article>
+    </section>
+  </main>
+
+  <div id="downloadToast" class="toast hidden" role="status" aria-live="polite"></div>
+  <script src="download.js"></script>
+</body>
+</html>
