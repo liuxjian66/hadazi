@@ -27,6 +27,7 @@ const CHAT_RETENTION_DAYS = 3;
 const PLAZA_RETENTION_DAYS = 7;
 const DEFAULT_GROUP_ID = "group_public";
 const DEFAULT_GROUP_NAME = "校园大厅";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "18045461800";
 
 const mbtiPairs = {
   INTJ: ["ENFP", "ENTP", "INFJ", "INTP"],
@@ -87,6 +88,12 @@ function stripPrivateProfile(profile) {
   if (!profile) return profile;
   const { passwordHash, password, resetCode, ...safeProfile } = profile;
   return safeProfile;
+}
+
+function requireAdmin(req, res, next) {
+  const password = safeText(req.get("x-admin-password") || req.body?.password || req.query?.password).slice(0, 64);
+  if (password !== ADMIN_PASSWORD) return res.status(401).json({ error: "管理员密码不正确" });
+  next();
 }
 
 function normalizeProfile(body) {
@@ -400,6 +407,13 @@ async function getPosts() {
   }));
 }
 
+async function getRawPosts() {
+  if (!useSupabase) return readDb().posts || [];
+  const { data, error } = await supabase.from("posts").select("id,data,created_at").order("created_at", { ascending: false });
+  if (error) throw error;
+  return data.map(fromRow);
+}
+
 async function savePost(post) {
   if (!useSupabase) {
     const db = readDb();
@@ -414,6 +428,19 @@ async function savePost(post) {
     .single();
   if (error) throw error;
   return fromRow(data);
+}
+
+async function deletePost(postId) {
+  if (!useSupabase) {
+    const db = readDb();
+    const before = db.posts.length;
+    db.posts = db.posts.filter((post) => post.id !== postId);
+    writeDb(db);
+    return before !== db.posts.length;
+  }
+  const { error } = await supabase.from("posts").delete().eq("id", postId);
+  if (error) throw error;
+  return true;
 }
 
 async function getProfile(id) {
@@ -437,6 +464,31 @@ async function saveProfile(profile) {
     .single();
   if (error) throw error;
   return fromRow(data);
+}
+
+async function deleteUser(userId) {
+  if (!useSupabase) {
+    const db = readDb();
+    const existed = Boolean(db.profiles?.[userId]);
+    delete db.profiles[userId];
+    db.posts = (db.posts || []).filter((post) => post.userId !== userId && post.personId !== userId);
+    db.messages = (db.messages || []).filter((msg) => {
+      const ids = [msg.userId, msg.personId, msg.fromUserId, msg.toUserId].filter(Boolean);
+      return !ids.includes(userId);
+    });
+    delete db.friends[userId];
+    Object.keys(db.friends || {}).forEach((key) => {
+      db.friends[key] = (db.friends[key] || []).filter((id) => id !== userId);
+    });
+    writeDb(db);
+    return existed;
+  }
+  await supabase.from("friends").delete().or(`user_id.eq.${userId},person_id.eq.${userId}`);
+  await supabase.from("messages").delete().or(`user_id.eq.${userId},person_id.eq.${userId}`);
+  await supabase.from("posts").delete().or(`user_id.eq.${userId},person_id.eq.${userId}`);
+  const { error } = await supabase.from("profiles").delete().eq("id", userId);
+  if (error) throw error;
+  return true;
 }
 
 async function getFriends(userId) {
@@ -522,6 +574,15 @@ async function getMessages(userId, personId) {
   });
 }
 
+async function getAllMessages() {
+  if (!useSupabase) {
+    return (readDb().messages || []).slice().sort((a, b) => new Date(b.time) - new Date(a.time));
+  }
+  const { data, error } = await supabase.from("messages").select("id,data,created_at").order("created_at", { ascending: false }).limit(300);
+  if (error) throw error;
+  return data.map(fromRow);
+}
+
 async function saveMessage(message) {
   if (!useSupabase) {
     const db = readDb();
@@ -554,6 +615,19 @@ async function updateMessage(messageId, updater) {
   const { data, error } = await supabase.from("messages").update({ data: next }).eq("id", messageId).select("id,data").single();
   if (error) throw error;
   return fromRow(data);
+}
+
+async function deleteMessage(messageId) {
+  if (!useSupabase) {
+    const db = readDb();
+    const before = db.messages.length;
+    db.messages = db.messages.filter((msg) => msg.id !== messageId);
+    writeDb(db);
+    return before !== db.messages.length;
+  }
+  const { error } = await supabase.from("messages").delete().eq("id", messageId);
+  if (error) throw error;
+  return true;
 }
 
 async function getUserPosts(userId) {
@@ -591,6 +665,79 @@ app.use(express.static(__dirname));
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, name: "HaDaZi", database: useSupabase ? "supabase" : "local-json", time: new Date().toISOString() });
 });
+
+app.post("/api/admin/login", (req, res) => {
+  const password = safeText(req.body?.password).slice(0, 64);
+  if (password !== ADMIN_PASSWORD) return res.status(401).json({ error: "管理员密码不正确" });
+  res.json({ ok: true });
+});
+
+app.get("/api/admin/summary", requireAdmin, asyncRoute(async (req, res) => {
+  const users = await getAllProfiles();
+  const posts = await getRawPosts();
+  const messages = await getAllMessages();
+  res.json({
+    ok: true,
+    database: useSupabase ? "Supabase" : "本地 JSON",
+    users: users.length,
+    posts: posts.length,
+    messages: messages.length,
+    updatedAt: new Date().toISOString()
+  });
+}));
+
+app.get("/api/admin/users", requireAdmin, asyncRoute(async (req, res) => {
+  const users = (await getAllProfiles()).map(stripPrivateProfile);
+  const posts = await getRawPosts();
+  const messages = await getAllMessages();
+  const safeUsers = users.map((user) => ({
+    ...user,
+    postCount: posts.filter((post) => post.userId === user.id || post.personId === user.id).length,
+    messageCount: messages.filter((msg) => [msg.userId, msg.personId, msg.fromUserId, msg.toUserId].includes(user.id)).length
+  }));
+  res.json(safeUsers);
+}));
+
+app.delete("/api/admin/users/:id", requireAdmin, asyncRoute(async (req, res) => {
+  const userId = safeText(req.params.id);
+  if (!userId) return res.status(400).json({ error: "用户 ID 不能为空" });
+  res.json({ ok: true, deleted: await deleteUser(userId) });
+}));
+
+app.get("/api/admin/posts", requireAdmin, asyncRoute(async (req, res) => {
+  const users = await getAllProfiles();
+  const posts = await getRawPosts();
+  res.json(posts.map((post) => ({
+    ...post,
+    person: stripPrivateProfile(users.find((user) => user.id === post.personId || user.id === post.userId) || null)
+  })));
+}));
+
+app.delete("/api/admin/posts/:id", requireAdmin, asyncRoute(async (req, res) => {
+  const postId = safeText(req.params.id);
+  if (!postId) return res.status(400).json({ error: "内容 ID 不能为空" });
+  res.json({ ok: true, deleted: await deletePost(postId) });
+}));
+
+app.get("/api/admin/messages", requireAdmin, asyncRoute(async (req, res) => {
+  const messages = await getAllMessages();
+  res.json(messages.slice(0, 300));
+}));
+
+app.post("/api/admin/messages/:id/revoke", requireAdmin, asyncRoute(async (req, res) => {
+  const message = await updateMessage(req.params.id, (old) => ({ ...old, revoked: true, text: "这条消息已撤回", imageData: "", kind: "text" }));
+  if (!message) return res.status(404).json({ error: "消息不存在" });
+  io.to(message.userId).emit("chat:revoke", message);
+  if (message.personId === DEFAULT_GROUP_ID) io.to(`group:${message.personId}`).emit("group:revoke", message);
+  else io.to(message.personId).emit("chat:revoke", message);
+  res.json({ ok: true, message });
+}));
+
+app.delete("/api/admin/messages/:id", requireAdmin, asyncRoute(async (req, res) => {
+  const messageId = safeText(req.params.id);
+  if (!messageId) return res.status(400).json({ error: "消息 ID 不能为空" });
+  res.json({ ok: true, deleted: await deleteMessage(messageId) });
+}));
 
 app.get("/api/people", asyncRoute(async (req, res) => {
   const currentUserId = safeText(req.query.exclude);

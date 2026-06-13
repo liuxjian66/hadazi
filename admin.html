@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#1c1b33" />
+  <title>HaDaZi 管理后台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="admin">
+  <main class="admin-page">
+    <section id="adminLogin" class="section admin-login">
+      <p class="eyebrow">Admin</p>
+      <h1>HaDaZi 管理后台</h1>
+      <p>这个页面不会出现在用户导航里。输入管理员密码后可以查看用户、删除用户、管理广场内容和消息。</p>
+      <form id="adminLoginForm" class="admin-login-form">
+        <input id="adminPassword" type="password" placeholder="请输入管理员密码" autocomplete="current-password" />
+        <button class="btn primary" type="submit">进入管理后台</button>
+      </form>
+      <p id="adminLoginMsg" class="admin-msg"></p>
+    </section>
+
+    <section id="adminApp" class="admin-app hidden">
+      <header class="section admin-head">
+        <div>
+          <p class="eyebrow">Dashboard</p>
+          <h1>网站管理</h1>
+          <p>谨慎操作：删除用户会同时清理该用户的广场内容、好友关系和聊天记录。</p>
+        </div>
+        <div class="admin-actions">
+          <button id="refreshAdminBtn" class="btn ghost" type="button">刷新数据</button>
+          <button id="lockAdminBtn" class="btn subtle" type="button">锁定后台</button>
+        </div>
+      </header>
+
+      <section id="adminSummary" class="admin-summary"></section>
+
+      <section class="section admin-panel">
+        <div class="section-head">
+          <p class="eyebrow">Users</p>
+          <h2>所有用户</h2>
+          <p>可查看用户资料、MBTI、手机号、动态数量和消息数量。</p>
+        </div>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>用户</th>
+                <th>手机号</th>
+                <th>MBTI</th>
+                <th>资料</th>
+                <th>内容</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="adminUsers"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section admin-panel">
+        <div class="section-head">
+          <p class="eyebrow">Plaza</p>
+          <h2>广场内容</h2>
+          <p>可以删除用户发表的广场内容；系统周动态不在这里管理。</p>
+        </div>
+        <div id="adminPosts" class="admin-list"></div>
+      </section>
+
+      <section class="section admin-panel">
+        <div class="section-head">
+          <p class="eyebrow">Messages</p>
+          <h2>最近消息</h2>
+          <p>最多显示最近 300 条消息，可以撤回或删除不合适内容。</p>
+        </div>
+        <div id="adminMessages" class="admin-list"></div>
+      </section>
+    </section>
+  </main>
+  <script src="admin.js"></script>
+</body>
+</html>
