@@ -16,6 +16,7 @@ const io = new Server(server, { cors: { origin: "*" } });
 const PORT = process.env.PORT || 3000;
 const dbDir = path.join(__dirname, "data");
 const dbPath = path.join(dbDir, "db.json");
+const aiConfigPath = path.join(dbDir, "ai-config.json");
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 const useSupabase = Boolean(supabaseUrl && supabaseKey);
@@ -72,6 +73,28 @@ function readDb() {
 
 function writeDb(data) {
   fs.writeFileSync(dbPath, JSON.stringify(data, null, 2), "utf8");
+}
+
+function readAiConfig() {
+  ensureDb();
+  if (!fs.existsSync(aiConfigPath)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(aiConfigPath, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+function writeAiConfig(config) {
+  ensureDb();
+  const safeConfig = {
+    apiKey: safeLongText(config.apiKey, 300),
+    apiBase: safeLongText(config.apiBase, 300) || AI_API_BASE,
+    model: safeText(config.model, AI_MODEL).slice(0, 80),
+    updatedAt: new Date().toISOString()
+  };
+  fs.writeFileSync(aiConfigPath, JSON.stringify(safeConfig, null, 2), "utf8");
+  return safeConfig;
 }
 
 function safeText(value, fallback = "") {
@@ -829,10 +852,11 @@ function generateLocalExAiReply({ profile, messages }) {
 }
 
 async function callExAi({ profile, messages, settings = {} }) {
+  const savedAiConfig = readAiConfig();
   const requestApiKey = safeLongText(settings.apiKey, 300);
-  const apiKey = requestApiKey || AI_API_KEY;
-  const apiBase = safeLongText(settings.apiBase, 300) || AI_API_BASE;
-  const model = safeText(settings.model, AI_MODEL).slice(0, 80);
+  const apiKey = requestApiKey || AI_API_KEY || safeLongText(savedAiConfig.apiKey, 300);
+  const apiBase = safeLongText(settings.apiBase, 300) || AI_API_BASE || safeLongText(savedAiConfig.apiBase, 300);
+  const model = safeText(settings.model, AI_MODEL).slice(0, 80) || safeText(savedAiConfig.model, AI_MODEL).slice(0, 80);
   if (!apiKey) {
     return {
       localMode: true,
@@ -897,6 +921,34 @@ app.post("/api/admin/login", (req, res) => {
   const password = safeText(req.body?.password).slice(0, 64);
   if (password !== ADMIN_PASSWORD) return res.status(401).json({ error: "管理员密码不正确" });
   res.json({ ok: true });
+});
+
+app.get("/api/admin/ai-config", requireAdmin, (req, res) => {
+  const savedAiConfig = readAiConfig();
+  res.json({
+    ok: true,
+    hasKey: Boolean(AI_API_KEY || savedAiConfig.apiKey),
+    apiBase: savedAiConfig.apiBase || AI_API_BASE,
+    model: savedAiConfig.model || AI_MODEL,
+    updatedAt: savedAiConfig.updatedAt || null
+  });
+});
+
+app.post("/api/admin/ai-config", requireAdmin, (req, res) => {
+  const apiKey = safeLongText(req.body?.apiKey, 300);
+  if (!apiKey.startsWith("sk-")) return res.status(400).json({ error: "API Key 格式不正确" });
+  const savedAiConfig = writeAiConfig({
+    apiKey,
+    apiBase: req.body?.apiBase || "https://api.deepseek.com",
+    model: req.body?.model || "deepseek-v4-flash"
+  });
+  res.json({
+    ok: true,
+    hasKey: true,
+    apiBase: savedAiConfig.apiBase,
+    model: savedAiConfig.model,
+    updatedAt: savedAiConfig.updatedAt
+  });
 });
 
 app.get("/api/admin/summary", requireAdmin, asyncRoute(async (req, res) => {
