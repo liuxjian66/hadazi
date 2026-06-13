@@ -1,6 +1,6 @@
 const exAiKeys = {
-  persona: "hadaziExAiPersonaSingleGirlV1",
-  messages: "hadaziExAiMessages",
+  persona: "hadaziExAiPersonaLinCheV2",
+  messages: "hadaziExAiMessagesLinCheV2",
   settings: "hadaziExAiSettings"
 };
 
