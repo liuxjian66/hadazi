@@ -173,7 +173,8 @@ function shouldSkipProactive(state) {
   if (Number.isFinite(lastProactiveTime) && Date.now() - lastProactiveTime < 10 * 60 * 1000) return true;
   const lastMessage = [...(state.messages || [])].reverse().find(Boolean);
   const lastMessageTime = new Date(lastMessage?.at || 0).getTime();
-  if (Number.isFinite(lastMessageTime) && Date.now() - lastMessageTime < 90 * 1000) return true;
+  const isOnlyInitialMessage = (state.messages || []).length <= 1 && lastMessage?.role === "assistant";
+  if (!isOnlyInitialMessage && Number.isFinite(lastMessageTime) && Date.now() - lastMessageTime < 90 * 1000) return true;
   return false;
 }
 
