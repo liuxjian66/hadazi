@@ -157,11 +157,11 @@ exAiEls.form?.addEventListener("submit", async (event) => {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "AI 回复失败");
     exAiMessages.push({ role: "assistant", content: data.reply });
-    if (data.setupRequired) showExAiToast("还没配置 AI Key，当前是接入提示");
+    if (data.localMode) showExAiToast("当前使用本地林澈角色回复，可直接聊天");
   } catch (error) {
     exAiMessages.push({
       role: "assistant",
-      content: `现在还不能正常调用 AI：${error.message}\n你可以继续补充资料，等 API Key 配好后再聊。`
+      content: `刚才网络有点不稳。\n你再发一遍，我听着。`
     });
   } finally {
     saveJson(exAiKeys.messages, exAiMessages);

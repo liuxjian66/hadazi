@@ -734,6 +734,100 @@ ${profile.corrections || "（暂无）"}
 5. 每次回复 1 到 4 句，像手机聊天，不要使用项目符号。`;
 }
 
+function pickReply(list, seed = "") {
+  const text = String(seed || "");
+  let sum = 0;
+  for (const char of text) sum += char.charCodeAt(0);
+  return list[sum % list.length];
+}
+
+function generateLocalExAiReply({ profile, messages }) {
+  const last = [...messages].reverse().find((message) => message.role === "user")?.content || "";
+  const text = last.trim();
+  const lower = text.toLowerCase();
+  const hasSupplement = Boolean(profile.supplement);
+
+  if (!text) return "话都没说完。\n重来。";
+
+  if (/在干嘛|干嘛呢|忙吗|你在/.test(text)) {
+    return pickReply([
+      "看点东西。\n不算忙，你说。",
+      "刚把手头的事收了。\n怎么，突然想起我了？",
+      "没干什么。\n但你这个开场，多少有点没新意。"
+    ], text);
+  }
+
+  if (/想你|想我|喜欢|爱你|亲|抱|撩|心动/.test(text)) {
+    return pickReply([
+      "少来。\n这种话你倒是说得挺顺。",
+      "嗯，听见了。\n别指望我现在就接你的招。",
+      "你这人挺会挑时间的。\n我差点就当真了。"
+    ], text);
+  }
+
+  if (/吃什么|吃饭|饿|火锅|奶茶|咖啡|夜宵/.test(text)) {
+    return pickReply([
+      "先吃饭。\n别一边喊饿一边拖着不动。",
+      "火锅可以。\n但别问我随便，随便通常最麻烦。",
+      "你先把选择列出来。\n我负责否掉不靠谱的。"
+    ], text);
+  }
+
+  if (/难受|烦|累|崩|emo|不开心|委屈|压力|焦虑|失眠/.test(lower)) {
+    return pickReply([
+      "别硬撑。\n先把水喝了，事情一件一件拆开说。",
+      "嗯，我在。\n你可以乱一点说，不用整理得很漂亮。",
+      "你现在需要的不是逞强。\n坐下，慢慢讲。"
+    ], text);
+  }
+
+  if (/吵架|生气|错了|对不起|抱歉|冷战|矛盾/.test(text)) {
+    return pickReply([
+      "有问题就说问题。\n别绕，也别憋着。",
+      "道歉我听见了。\n但重点是下次怎么改，不是现在说得多好听。",
+      "我不喜欢冷战。\n你想讲，我就听；你想逃，那就没意思了。"
+    ], text);
+  }
+
+  if (/早安|早上好|醒了|晚安|睡觉|困/.test(text)) {
+    return pickReply([
+      "醒了就去洗漱。\n别赖太久。",
+      "晚安。\n手机放远点，别又刷到半夜。",
+      "困了就睡。\n逞强熬夜这事，没什么好骄傲的。"
+    ], text);
+  }
+
+  if (/哈哈|笑死|有意思|好玩|笨|傻/.test(text)) {
+    return pickReply([
+      "你笑点还挺低。\n不过这样也不算坏事。",
+      "行，今天算你有点意思。",
+      "别笑太早。\n你也没聪明到哪去。"
+    ], text);
+  }
+
+  if (/你是谁|叫什么|名字|人设|性格/.test(text)) {
+    return "林澈。\n外冷内热，嘴硬心软那种。\n别把我想得太甜，我不走那套。";
+  }
+
+  if (/帮我|怎么办|建议|选择|应该|要不要/.test(text)) {
+    return pickReply([
+      "先别急着做决定。\n把你最在意的点排出来，答案基本就出来了。",
+      "我的建议是选那个你明天醒来不会后悔的。\n别为了短暂舒服糊弄自己。",
+      "你其实心里有倾向。\n只是想找个人帮你确认一下，对吧。"
+    ], text);
+  }
+
+  const baseReplies = [
+    "嗯，我听着。\n你继续说。",
+    "可以。\n但你这话还没说到重点。",
+    "听起来你心里已经有答案了。\n只是还没打算承认。",
+    "行，先这样。\n不过别自己脑补太多。",
+    "你慢慢说。\n我不催你。"
+  ];
+  const reply = pickReply(baseReplies, text);
+  return hasSupplement ? `${reply}\n你补充的那些细节，我记着。` : reply;
+}
+
 async function callExAi({ profile, messages, settings = {} }) {
   const requestApiKey = safeLongText(settings.apiKey, 300);
   const apiKey = requestApiKey || AI_API_KEY;
@@ -741,8 +835,8 @@ async function callExAi({ profile, messages, settings = {} }) {
   const model = safeText(settings.model, AI_MODEL).slice(0, 80);
   if (!apiKey) {
     return {
-      setupRequired: true,
-      reply: "林澈这个单人角色已经固定好了。\n但服务器还没配置 AI_API_KEY，所以现在只能先保存人设和补充文字。\n你把 AI Key 给我，我就能让她真正开始回消息。"
+      localMode: true,
+      reply: generateLocalExAiReply({ profile, messages })
     };
   }
 
@@ -781,6 +875,11 @@ async function callExAi({ profile, messages, settings = {} }) {
       throw err;
     }
     return { reply };
+  } catch (error) {
+    return {
+      localMode: true,
+      reply: generateLocalExAiReply({ profile, messages })
+    };
   } finally {
     clearTimeout(timer);
   }
