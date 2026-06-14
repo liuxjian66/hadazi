@@ -235,11 +235,26 @@ function normalizeUserLocation(location = {}) {
   };
 }
 
+function extractMediaTitle(content = "") {
+  const text = safeLongText(content, 160);
+  const quoted = text.match(/[《「“]([^》」”]{2,30})[》」”]/)?.[1];
+  if (quoted) return quoted.trim();
+  const afterType = text.match(/(?:电视剧|剧集|电影|影视剧|综艺|短剧)\s*([^的，。？！?]{2,24})(?:的|剧情|结局|演员|角色|讲|是|怎么样|好看|$)/)?.[1];
+  if (afterType) return afterType.replace(/这部|这个|这剧|这电影|最近|热播/g, "").trim();
+  const beforeInfo = text.match(/([^，。？！?]{2,24})(?:的)?(?:剧情|结局|演员|角色|分集|大结局|讲什么|好看吗)/)?.[1];
+  if (beforeInfo) return beforeInfo.replace(/这部|这个|这剧|这电影|电视剧|电影|综艺|帮我|查一下/g, "").trim();
+  return "";
+}
+
 function buildExAiSearchQuery(content = "") {
   const text = safeLongText(content, 160);
+  const mediaTitle = extractMediaTitle(text);
+  if (mediaTitle && /电视剧|剧集|热播|电影|影视|综艺|剧情|分集|大结局|结局|角色|人物|演员|导演|编剧|上映|播出|原著|改编|豆瓣|评分/.test(text)) {
+    return `${mediaTitle} 影视 剧情 演员 官方资料 百度百科 豆瓣`.trim();
+  }
   const base = text
     .replace(/https?:\/\/[^\s<>"'，。！？、]+/gi, " ")
-    .replace(/徐栀|帮我|你帮我|给我|请你|麻烦你|联网|上网|查一下|帮我查|搜索|搜一下|网上|一下|好吗|行吗|可以吗|最近|现在|今天|热点|热门|这个链接|这个视频|这个内容/g, " ")
+    .replace(/徐栀|帮我|你帮我|给我|请你|麻烦你|联网|上网|查一下|帮我查|搜索|搜一下|网上|一下|好吗|行吗|可以吗|最近|现在|今天|热点|热门|这个链接|这个视频|这个内容|这部|这个|这剧|这电影|的剧情是什么|剧情是什么|是什么/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 100);
