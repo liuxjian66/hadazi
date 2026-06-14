@@ -3,7 +3,8 @@ const exAiKeys = {
   messages: "hadaziExAiMessagesXuZhiCoolSyncV2",
   settings: "hadaziExAiSettings",
   memories: "hadaziExAiLongMemoriesXuZhiCoolSyncV2",
-  sharedMigrated: "hadaziExAiSharedMigratedXuZhiCoolSyncV2"
+  sharedMigrated: "hadaziExAiSharedMigratedXuZhiCoolSyncV2",
+  location: "hadaziExAiLocationXuZhiCoolSyncV2"
 };
 
 const fixedGirlPersona = {
@@ -47,6 +48,7 @@ let exAiSettings = {
   model: "",
   apiKey: ""
 };
+let exAiLocation = loadJson(exAiKeys.location, null);
 let exAiBusy = false;
 let exAiLoaded = false;
 let exAiLastInteractionAt = Date.now();
@@ -62,6 +64,42 @@ function loadJson(key, fallback) {
 
 function saveJson(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
+}
+
+function saveUserLocation(position) {
+  exAiLocation = {
+    latitude: Number(position.coords.latitude.toFixed(5)),
+    longitude: Number(position.coords.longitude.toFixed(5)),
+    accuracy: Math.round(position.coords.accuracy || 0),
+    at: new Date().toISOString()
+  };
+  saveJson(exAiKeys.location, exAiLocation);
+  return exAiLocation;
+}
+
+async function requestUserLocation() {
+  if (!("geolocation" in navigator)) return null;
+  try {
+    const permission = navigator.permissions?.query
+      ? await navigator.permissions.query({ name: "geolocation" })
+      : null;
+    if (permission?.state === "denied") return exAiLocation;
+  } catch {
+    // 浏览器不支持 permissions 查询时，继续尝试定位。
+  }
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => resolve(saveUserLocation(position)),
+      () => resolve(exAiLocation),
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 30 * 60 * 1000 }
+    );
+  });
+}
+
+function shouldRefreshLocation(content = "") {
+  if (!/天气|预报|气温|温度|附近|周边|当地|本地|位置/.test(content)) return false;
+  const time = new Date(exAiLocation?.at || 0).getTime();
+  return !Number.isFinite(time) || Date.now() - time > 6 * 60 * 60 * 1000;
 }
 
 async function requestJson(url, options = {}) {
@@ -129,6 +167,7 @@ async function loadSharedExAiState() {
     exAiLongMemories = loadJson(exAiKeys.memories, exAiLongMemories);
   } finally {
     exAiLoaded = true;
+    requestUserLocation();
     refreshPersonaFromMemory();
     renderExAiMessages();
     scheduleProactiveChat(12000);
@@ -184,11 +223,15 @@ exAiEls.form?.addEventListener("submit", async (event) => {
   setAiBusy(true);
 
   try {
+    if (shouldRefreshLocation(content)) {
+      await requestUserLocation();
+    }
     const data = await requestJson("/api/ai/ex-send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        content
+        content,
+        location: exAiLocation || undefined
       })
     });
     exAiMessages = data.messages || exAiMessages;

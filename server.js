@@ -212,30 +212,51 @@ function maybeDecodeDuckUrl(value = "") {
 function shouldUseExAiWebSearch(content = "") {
   const text = String(content || "").trim();
   if (!text) return false;
-  return /联网|上网|查一下|帮我查|搜索|搜一下|网上|最新|实时|新闻|今天|现在|天气|预报|价格|股价|汇率|热搜|票房|比赛|赛程|航班|快递|政策|公告|官网|链接|资料|百科/.test(text);
+  return /联网|上网|查一下|帮我查|搜索|搜一下|网上|最新|实时|新闻|今天|现在|天气|预报|价格|股价|汇率|热搜|票房|比赛|赛程|航班|快递|政策|公告|官网|链接|资料|百科|电视剧|剧集|热播|抖音|短视频|热榜|热梗|热歌|电影|综艺/.test(text);
+}
+
+function normalizeUserLocation(location = {}) {
+  const latitude = Number(location.latitude);
+  const longitude = Number(location.longitude);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
+  return {
+    latitude: Number(latitude.toFixed(5)),
+    longitude: Number(longitude.toFixed(5)),
+    accuracy: Math.max(0, Math.min(Number(location.accuracy) || 0, 100000)),
+    at: safeText(location.at, new Date().toISOString()).slice(0, 40)
+  };
 }
 
 function buildExAiSearchQuery(content = "") {
-  return safeLongText(content, 160)
-    .replace(/徐栀|帮我|你帮我|给我|请你|麻烦你|联网|上网|查一下|帮我查|搜索|搜一下|网上|一下|好吗|行吗|可以吗/g, " ")
+  const text = safeLongText(content, 160);
+  const base = text
+    .replace(/徐栀|帮我|你帮我|给我|请你|麻烦你|联网|上网|查一下|帮我查|搜索|搜一下|网上|一下|好吗|行吗|可以吗|最近|现在|今天|热点|热门/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 100);
+  if (/抖音|短视频|热梗|热歌/.test(text)) return `${base} 抖音 热榜 今日`.trim();
+  if (/电视剧|剧集|热播/.test(text)) return `${base} 电视剧 热播榜 今日`.trim();
+  return base;
 }
 
 function buildWeatherQuery(content = "") {
   return safeLongText(content, 80)
-    .replace(/徐栀|帮我|你帮我|给我|请你|麻烦你|查一下|帮我查|搜索|搜一下|今天|现在|实时|天气|预报|怎么样|如何|多少|一下/g, " ")
+    .replace(/徐栀|帮我|你帮我|给我|请你|麻烦你|查一下|帮我查|搜索|搜一下|看看|看下|看一眼|今天|现在|实时|天气|预报|气温|温度|怎么样|如何|多少|一下|当地|本地|附近|周边/g, " ")
     .replace(/[，。？！,.?!]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 60) || "Beijing";
 }
 
-async function fetchWeatherResult(content) {
+async function fetchWeatherResult(content, userLocation = null) {
   if (!/天气|预报|气温|温度/.test(content)) return [];
   const city = buildWeatherQuery(content);
-  const url = `https://wttr.in/${encodeURIComponent(city)}?format=j1&lang=zh`;
+  const hasExplicitPlace = city && city !== "Beijing" && !/^(看看|看下|看一眼|这边|这里|那边|那里)$/.test(city);
+  const target = !hasExplicitPlace && userLocation
+    ? `${userLocation.latitude},${userLocation.longitude}`
+    : city;
+  const url = `https://wttr.in/${encodeURIComponent(target)}?format=j1&lang=zh`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
@@ -249,7 +270,7 @@ async function fetchWeatherResult(content) {
     const today = data.weather?.[0];
     if (!current) return [];
     const desc = current.lang_zh?.[0]?.value || current.weatherDesc?.[0]?.value || "未知";
-    const area = data.nearest_area?.[0]?.areaName?.[0]?.value || city;
+    const area = data.nearest_area?.[0]?.areaName?.[0]?.value || (userLocation && !hasExplicitPlace ? "你附近" : city);
     const snippet = [
       `${area}当前：${desc}，${current.temp_C}°C，体感 ${current.FeelsLikeC}°C，湿度 ${current.humidity}%`,
       today ? `今日范围：${today.mintempC}°C 到 ${today.maxtempC}°C，降水概率 ${today.hourly?.[4]?.chanceofrain || today.hourly?.[0]?.chanceofrain || "未知"}%` : ""
@@ -257,7 +278,7 @@ async function fetchWeatherResult(content) {
     return [{
       title: `${area}天气`,
       snippet,
-      url: `https://wttr.in/${encodeURIComponent(city)}`
+      url: `https://wttr.in/${encodeURIComponent(target)}`
     }];
   } catch {
     return [];
@@ -367,11 +388,11 @@ async function fetchDuckDuckGoHtml(query) {
   }
 }
 
-async function getExAiWebContext(content = "") {
+async function getExAiWebContext(content = "", userLocation = null) {
   if (!shouldUseExAiWebSearch(content)) return null;
   const query = buildExAiSearchQuery(content) || safeLongText(content, 100);
   const results = [
-    ...await fetchWeatherResult(content),
+    ...await fetchWeatherResult(content, userLocation),
     ...await fetchBingRss(query),
     ...await fetchDuckDuckGoInstant(query),
     ...await fetchDuckDuckGoHtml(query)
@@ -380,6 +401,7 @@ async function getExAiWebContext(content = "") {
     .slice(0, 5);
   return {
     query,
+    userLocation,
     results,
     searchedAt: new Date().toISOString()
   };
@@ -1087,11 +1109,16 @@ function buildExAiWebPrompt(webContext) {
     item.snippet ? `摘要：${item.snippet}` : "",
     item.url ? `来源：${item.url}` : ""
   ].filter(Boolean).join("\n"));
+  const locationLine = webContext.userLocation
+    ? `\n用户授权的位置：纬度 ${webContext.userLocation.latitude}，经度 ${webContext.userLocation.longitude}，精度约 ${Math.round(webContext.userLocation.accuracy || 0)} 米。`
+    : "";
   return `联网查询结果（查询词：${webContext.query}；时间：${webContext.searchedAt}）：
 ${lines.length ? lines.join("\n\n") : "没有拿到可靠搜索结果。"}
+${locationLine}
 
 使用规则：
 - 如果查询结果足够，就基于结果回答。
+- 天气、附近、本地相关问题优先按用户授权位置理解。
 - 如果结果不足或不确定，要直接说没查准，别编。
 - 回复仍然保持徐栀的语气，短一点、淡一点，但可以把关键来源顺手带上。`;
 }
@@ -1408,7 +1435,8 @@ app.post("/api/ai/ex-send", asyncRoute(async (req, res) => {
   const userMessage = { role: "user", content, at: new Date().toISOString() };
   const memories = rememberFromExAiUserMessage(content, current.memories || []);
   const messagesForAi = normalizeAiMessages([...current.messages, userMessage]);
-  const webContext = await getExAiWebContext(content);
+  const userLocation = normalizeUserLocation(req.body?.location);
+  const webContext = await getExAiWebContext(content, userLocation);
   const result = await callExAi({
     profile: buildSharedExAiProfile(memories),
     messages: messagesForAi,
