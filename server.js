@@ -1307,7 +1307,7 @@ function generateLocalExAiReply({ profile, messages, webContext = null }) {
 
 function shouldReplaceWeakWebReply(reply = "", webContext = null) {
   if (!webContext?.results?.length) return false;
-  return /不能上网|没法上网|查不了|点不进去|打不开|没看过|没追完|没全看完|没全看|不知道|不清楚|不确定|自己上网查|你自己查|直接看你投屏|比起查资料/.test(reply);
+  return /不能上网|没法上网|查不了|点不进去|打不开|没看过|没追完|没全看完|没全看|没细看|没.{0,4}看|你当我是百度百科|不知道|不清楚|不确定|自己上网查|你自己查|直接看你投屏|比起查资料/.test(reply);
 }
 
 async function callExAi({ profile, messages, settings = {}, webContext = null }) {
