@@ -1290,6 +1290,11 @@ function generateLocalExAiReply({ profile, messages, webContext = null }) {
   return hasSupplement ? `${reply}\n你补充的那些细节，我记着。` : reply;
 }
 
+function shouldReplaceWeakWebReply(reply = "", webContext = null) {
+  if (!webContext?.results?.length) return false;
+  return /不能上网|没法上网|查不了|点不进去|打不开|没看过|没追完|不知道|不清楚|不确定|直接看你投屏|比起查资料/.test(reply);
+}
+
 async function callExAi({ profile, messages, settings = {}, webContext = null }) {
   const savedAiConfig = readAiConfig();
   const requestApiKey = safeLongText(settings.apiKey, 300);
@@ -1337,6 +1342,12 @@ async function callExAi({ profile, messages, settings = {}, webContext = null })
       const err = new Error("AI 没有返回内容");
       err.status = 502;
       throw err;
+    }
+    if (shouldReplaceWeakWebReply(reply, webContext)) {
+      return {
+        webFallback: true,
+        reply: generateLocalExAiReply({ profile, messages, webContext })
+      };
     }
     return { reply };
   } catch (error) {
