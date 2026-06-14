@@ -209,10 +209,17 @@ function maybeDecodeDuckUrl(value = "") {
   }
 }
 
+function extractUrls(text = "") {
+  return [...String(text || "").matchAll(/https?:\/\/[^\s<>"'，。！？、]+/gi)]
+    .map((match) => match[0].replace(/[),.;]+$/, ""))
+    .slice(0, 3);
+}
+
 function shouldUseExAiWebSearch(content = "") {
   const text = String(content || "").trim();
   if (!text) return false;
-  return /联网|上网|查一下|帮我查|搜索|搜一下|网上|最新|实时|新闻|今天|现在|天气|预报|价格|股价|汇率|热搜|票房|比赛|赛程|航班|快递|政策|公告|官网|链接|资料|百科|电视剧|剧集|热播|抖音|短视频|热榜|热梗|热歌|电影|综艺/.test(text);
+  if (extractUrls(text).length) return true;
+  return /联网|上网|查一下|帮我查|搜索|搜一下|网上|最新|实时|新闻|资讯|公开信息|公开资料|今天|现在|天气|预报|价格|股价|汇率|热搜|票房|比赛|赛程|航班|快递|政策|公告|官网|链接|资料|百科|电视剧|剧集|热播|抖音|短视频|热榜|热梗|热歌|电影|影视|综艺|剧情|分集|大结局|结局|角色|人物|演员|导演|编剧|上映|播出|哪一集|第几集|原著|改编|豆瓣|评分|是什么|是谁|介绍/.test(text);
 }
 
 function normalizeUserLocation(location = {}) {
@@ -231,12 +238,15 @@ function normalizeUserLocation(location = {}) {
 function buildExAiSearchQuery(content = "") {
   const text = safeLongText(content, 160);
   const base = text
-    .replace(/徐栀|帮我|你帮我|给我|请你|麻烦你|联网|上网|查一下|帮我查|搜索|搜一下|网上|一下|好吗|行吗|可以吗|最近|现在|今天|热点|热门/g, " ")
+    .replace(/https?:\/\/[^\s<>"'，。！？、]+/gi, " ")
+    .replace(/徐栀|帮我|你帮我|给我|请你|麻烦你|联网|上网|查一下|帮我查|搜索|搜一下|网上|一下|好吗|行吗|可以吗|最近|现在|今天|热点|热门|这个链接|这个视频|这个内容/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 100);
   if (/抖音|短视频|热梗|热歌/.test(text)) return `${base} 抖音 热榜 今日`.trim();
-  if (/电视剧|剧集|热播/.test(text)) return `${base} 电视剧 热播榜 今日`.trim();
+  if (/电视剧|剧集|热播|电影|影视|综艺|剧情|分集|大结局|结局|角色|人物|演员|导演|编剧|上映|播出|原著|改编|豆瓣|评分/.test(text)) {
+    return `${base} 影视 剧情 演员 公开资料 官方 豆瓣 百度百科`.trim();
+  }
   return base;
 }
 
@@ -388,10 +398,56 @@ async function fetchDuckDuckGoHtml(query) {
   }
 }
 
+async function fetchLinkedPageSummary(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      redirect: "follow",
+      headers: {
+        "User-Agent": "Mozilla/5.0 HaDaZi-AI/1.0",
+        "Accept": "text/html,application/xhtml+xml,text/plain"
+      }
+    });
+    if (!response.ok) return null;
+    const contentType = response.headers.get("content-type") || "";
+    const finalUrl = response.url || url;
+    const raw = safeLongText(await response.text(), 80000);
+    const title = contentType.includes("html")
+      ? stripHtml(raw.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "")
+      : "链接内容";
+    const description = contentType.includes("html")
+      ? stripHtml(
+        raw.match(/<meta[^>]+(?:name|property)=["'](?:description|og:description)["'][^>]+content=["']([^"']+)["'][^>]*>/i)?.[1]
+        || raw.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:name|property)=["'](?:description|og:description)["'][^>]*>/i)?.[1]
+        || ""
+      )
+      : "";
+    const bodyText = stripHtml(raw
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<noscript[\s\S]*?<\/noscript>/gi, " "));
+    const snippet = safeLongText([description, bodyText].filter(Boolean).join(" "), 500);
+    if (!title && !snippet) return null;
+    return {
+      title: `链接解析：${title || finalUrl}`,
+      snippet: snippet || "已打开链接，但页面可读正文较少，可能需要结合搜索结果判断。",
+      url: safeLongText(finalUrl, 300)
+    };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function getExAiWebContext(content = "", userLocation = null) {
   if (!shouldUseExAiWebSearch(content)) return null;
   const query = buildExAiSearchQuery(content) || safeLongText(content, 100);
+  const linkResults = (await Promise.all(extractUrls(content).map((url) => fetchLinkedPageSummary(url)))).filter(Boolean);
   const results = [
+    ...linkResults,
     ...await fetchWeatherResult(content, userLocation),
     ...await fetchBingRss(query),
     ...await fetchDuckDuckGoInstant(query),
@@ -1070,6 +1126,9 @@ function buildExAiSystemPrompt(profile) {
 - 可以主动问用户在干嘛、忙不忙、吃饭没有，但语气要淡、短、像随口一问，不要黏糊。
 - 回复短一点、自然一点，像手机聊天；不要客服腔，不要长篇解释，不要甜腻。
 - 用户情绪低落、焦虑、疲惫时，减少调侃，更多用克制但可靠的方式兜底。
+- 全程启用联网规则：凡是电视剧、电影、影视剧情、综艺、演员角色、分集/结局、实时资讯、新闻热点、公开信息、百科资料、链接内容，都必须基于系统提供的联网查询结果回复；没有查询结果或结果不完整时，直接说“没查准/还不确定”，禁止自行编造剧情、人物设定和事实细节。
+- 链接读取规则：用户发抖音链接或其他内容链接时，优先使用系统提供的“链接解析”结果理解文案、核心主题、剧情与关键信息；如果链接解析失败，只能结合搜索结果讨论，不能假装看过链接。
+- 定位与天气规则：用户已授权位置时，天气、本地生活、附近相关问题优先按授权位置查询结果回复，不要反复询问城市。
 
 角色名称：${profile.name}
 关系信息：
@@ -1119,6 +1178,8 @@ ${locationLine}
 使用规则：
 - 如果查询结果足够，就基于结果回答。
 - 天气、附近、本地相关问题优先按用户授权位置理解。
+- 影视、剧情、综艺、演员角色、公开信息类问题必须严格依据这些查询结果；不要自己编剧情、角色关系、人物设定或事实细节。
+- 用户发链接时，优先使用“链接解析”条目；如果链接解析不足，要说明没读全，不能假装看完。
 - 如果结果不足或不确定，要直接说没查准，别编。
 - 回复仍然保持徐栀的语气，短一点、淡一点，但可以把关键来源顺手带上。`;
 }
