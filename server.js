@@ -184,6 +184,207 @@ function safeLongText(value, max = 8000) {
   return String(value || "").trim().slice(0, max);
 }
 
+function decodeHtmlEntity(value = "") {
+  return String(value)
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCharCode(parseInt(code, 16)));
+}
+
+function stripHtml(value = "") {
+  return decodeHtmlEntity(String(value).replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+}
+
+function maybeDecodeDuckUrl(value = "") {
+  try {
+    const decoded = decodeHtmlEntity(value);
+    const url = new URL(decoded, "https://duckduckgo.com");
+    return url.searchParams.get("uddg") || decoded;
+  } catch {
+    return decodeHtmlEntity(value);
+  }
+}
+
+function shouldUseExAiWebSearch(content = "") {
+  const text = String(content || "").trim();
+  if (!text) return false;
+  return /联网|上网|查一下|帮我查|搜索|搜一下|网上|最新|实时|新闻|今天|现在|天气|预报|价格|股价|汇率|热搜|票房|比赛|赛程|航班|快递|政策|公告|官网|链接|资料|百科/.test(text);
+}
+
+function buildExAiSearchQuery(content = "") {
+  return safeLongText(content, 160)
+    .replace(/徐栀|帮我|你帮我|给我|请你|麻烦你|联网|上网|查一下|帮我查|搜索|搜一下|网上|一下|好吗|行吗|可以吗/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 100);
+}
+
+function buildWeatherQuery(content = "") {
+  return safeLongText(content, 80)
+    .replace(/徐栀|帮我|你帮我|给我|请你|麻烦你|查一下|帮我查|搜索|搜一下|今天|现在|实时|天气|预报|怎么样|如何|多少|一下/g, " ")
+    .replace(/[，。？！,.?!]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 60) || "Beijing";
+}
+
+async function fetchWeatherResult(content) {
+  if (!/天气|预报|气温|温度/.test(content)) return [];
+  const city = buildWeatherQuery(content);
+  const url = `https://wttr.in/${encodeURIComponent(city)}?format=j1&lang=zh`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: { "User-Agent": "Mozilla/5.0 HaDaZi-AI/1.0" }
+    });
+    if (!response.ok) return [];
+    const data = await response.json().catch(() => ({}));
+    const current = data.current_condition?.[0];
+    const today = data.weather?.[0];
+    if (!current) return [];
+    const desc = current.lang_zh?.[0]?.value || current.weatherDesc?.[0]?.value || "未知";
+    const area = data.nearest_area?.[0]?.areaName?.[0]?.value || city;
+    const snippet = [
+      `${area}当前：${desc}，${current.temp_C}°C，体感 ${current.FeelsLikeC}°C，湿度 ${current.humidity}%`,
+      today ? `今日范围：${today.mintempC}°C 到 ${today.maxtempC}°C，降水概率 ${today.hourly?.[4]?.chanceofrain || today.hourly?.[0]?.chanceofrain || "未知"}%` : ""
+    ].filter(Boolean).join("；");
+    return [{
+      title: `${area}天气`,
+      snippet,
+      url: `https://wttr.in/${encodeURIComponent(city)}`
+    }];
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchBingRss(query) {
+  const url = `https://www.bing.com/search?q=${encodeURIComponent(query)}&format=rss`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 HaDaZi-AI/1.0",
+        "Accept": "application/rss+xml,text/xml"
+      }
+    });
+    if (!response.ok) return [];
+    const xml = await response.text();
+    return [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 5).map((match) => {
+      const block = match[1];
+      const title = block.match(/<title>([\s\S]*?)<\/title>/)?.[1] || "";
+      const link = block.match(/<link>([\s\S]*?)<\/link>/)?.[1] || "";
+      const desc = block.match(/<description>([\s\S]*?)<\/description>/)?.[1] || "";
+      return {
+        title: safeLongText(stripHtml(title), 120),
+        snippet: safeLongText(stripHtml(desc), 300),
+        url: safeLongText(decodeHtmlEntity(link), 300)
+      };
+    }).filter((item) => item.title);
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchDuckDuckGoInstant(query) {
+  const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1&kl=wt-wt`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: { "User-Agent": "Mozilla/5.0 HaDaZi-AI/1.0" }
+    });
+    if (!response.ok) return [];
+    const data = await response.json().catch(() => ({}));
+    const results = [];
+    if (data.AbstractText) {
+      results.push({
+        title: safeLongText(data.Heading || query, 120),
+        snippet: safeLongText(data.AbstractText, 300),
+        url: safeLongText(data.AbstractURL, 300)
+      });
+    }
+    const related = Array.isArray(data.RelatedTopics) ? data.RelatedTopics : [];
+    for (const item of related.flatMap((topic) => Array.isArray(topic.Topics) ? topic.Topics : [topic])) {
+      if (!item?.Text) continue;
+      results.push({
+        title: safeLongText(item.Text.split(" - ")[0], 120),
+        snippet: safeLongText(item.Text, 300),
+        url: safeLongText(item.FirstURL, 300)
+      });
+      if (results.length >= 3) break;
+    }
+    return results;
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchDuckDuckGoHtml(query) {
+  const url = `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 HaDaZi-AI/1.0",
+        "Accept": "text/html,application/xhtml+xml"
+      }
+    });
+    if (!response.ok) return [];
+    const html = await response.text();
+    const blocks = html.split(/<div class="result results_links[^"]*"/).slice(1, 6);
+    return blocks.map((block) => {
+      const linkMatch = block.match(/<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/);
+      const snippetMatch = block.match(/<a[^>]+class="result__snippet"[^>]*>([\s\S]*?)<\/a>|<div[^>]+class="result__snippet"[^>]*>([\s\S]*?)<\/div>/);
+      if (!linkMatch) return null;
+      return {
+        title: safeLongText(stripHtml(linkMatch[2]), 120),
+        snippet: safeLongText(stripHtml(snippetMatch?.[1] || snippetMatch?.[2] || ""), 300),
+        url: safeLongText(maybeDecodeDuckUrl(linkMatch[1]), 300)
+      };
+    }).filter((item) => item?.title);
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function getExAiWebContext(content = "") {
+  if (!shouldUseExAiWebSearch(content)) return null;
+  const query = buildExAiSearchQuery(content) || safeLongText(content, 100);
+  const results = [
+    ...await fetchWeatherResult(content),
+    ...await fetchBingRss(query),
+    ...await fetchDuckDuckGoInstant(query),
+    ...await fetchDuckDuckGoHtml(query)
+  ]
+    .filter((item, index, list) => item?.title && list.findIndex((other) => other.url === item.url || other.title === item.title) === index)
+    .slice(0, 5);
+  return {
+    query,
+    results,
+    searchedAt: new Date().toISOString()
+  };
+}
+
 function isFresh(value, days) {
   const time = new Date(value || 0).getTime();
   return Number.isFinite(time) && Date.now() - time <= days * DAY;
@@ -879,13 +1080,40 @@ function pickReply(list, seed = "") {
   return list[sum % list.length];
 }
 
-function generateLocalExAiReply({ profile, messages }) {
+function buildExAiWebPrompt(webContext) {
+  if (!webContext) return "";
+  const lines = (webContext.results || []).map((item, index) => [
+    `${index + 1}. ${item.title}`,
+    item.snippet ? `摘要：${item.snippet}` : "",
+    item.url ? `来源：${item.url}` : ""
+  ].filter(Boolean).join("\n"));
+  return `联网查询结果（查询词：${webContext.query}；时间：${webContext.searchedAt}）：
+${lines.length ? lines.join("\n\n") : "没有拿到可靠搜索结果。"}
+
+使用规则：
+- 如果查询结果足够，就基于结果回答。
+- 如果结果不足或不确定，要直接说没查准，别编。
+- 回复仍然保持徐栀的语气，短一点、淡一点，但可以把关键来源顺手带上。`;
+}
+
+function generateLocalExAiReply({ profile, messages, webContext = null }) {
   const last = [...messages].reverse().find((message) => message.role === "user")?.content || "";
   const text = last.trim();
   const lower = text.toLowerCase();
   const hasSupplement = Boolean(profile.supplement);
 
   if (!text) return "话都没说完。\n重来。";
+
+  if (webContext) {
+    const results = webContext.results || [];
+    if (!results.length) return `我查了，没拿到靠谱结果。\n换个更具体的关键词，我再看。`;
+    const top = results[0];
+    return [
+      `查到了，先看这个：${top.title}`,
+      top.snippet ? top.snippet : "",
+      top.url ? `来源：${top.url}` : ""
+    ].filter(Boolean).join("\n").slice(0, 1200);
+  }
 
   if (/主动开口|主动找用户|开启主动/.test(text)) {
     return pickReply([
@@ -974,7 +1202,7 @@ function generateLocalExAiReply({ profile, messages }) {
   return hasSupplement ? `${reply}\n你补充的那些细节，我记着。` : reply;
 }
 
-async function callExAi({ profile, messages, settings = {} }) {
+async function callExAi({ profile, messages, settings = {}, webContext = null }) {
   const savedAiConfig = readAiConfig();
   const requestApiKey = safeLongText(settings.apiKey, 300);
   const apiKey = requestApiKey || AI_API_KEY || safeLongText(savedAiConfig.apiKey, 300);
@@ -983,7 +1211,7 @@ async function callExAi({ profile, messages, settings = {} }) {
   if (!apiKey) {
     return {
       localMode: true,
-      reply: generateLocalExAiReply({ profile, messages })
+      reply: generateLocalExAiReply({ profile, messages, webContext })
     };
   }
 
@@ -1005,6 +1233,7 @@ async function callExAi({ profile, messages, settings = {} }) {
         temperature: 0.85,
         messages: [
           { role: "system", content: buildExAiSystemPrompt(profile) },
+          ...(webContext ? [{ role: "system", content: buildExAiWebPrompt(webContext) }] : []),
           ...messages
         ]
       })
@@ -1025,7 +1254,7 @@ async function callExAi({ profile, messages, settings = {} }) {
   } catch (error) {
     return {
       localMode: true,
-      reply: generateLocalExAiReply({ profile, messages })
+      reply: generateLocalExAiReply({ profile, messages, webContext })
     };
   } finally {
     clearTimeout(timer);
@@ -1179,10 +1408,12 @@ app.post("/api/ai/ex-send", asyncRoute(async (req, res) => {
   const userMessage = { role: "user", content, at: new Date().toISOString() };
   const memories = rememberFromExAiUserMessage(content, current.memories || []);
   const messagesForAi = normalizeAiMessages([...current.messages, userMessage]);
+  const webContext = await getExAiWebContext(content);
   const result = await callExAi({
     profile: buildSharedExAiProfile(memories),
     messages: messagesForAi,
-    settings: {}
+    settings: {},
+    webContext
   });
   const assistantMessage = {
     role: "assistant",
@@ -1196,6 +1427,8 @@ app.post("/api/ai/ex-send", asyncRoute(async (req, res) => {
   res.json({
     ok: true,
     localMode: Boolean(result.localMode),
+    webSearched: Boolean(webContext),
+    webResults: webContext?.results?.length || 0,
     reply: assistantMessage.content,
     ...state
   });
