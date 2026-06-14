@@ -32,7 +32,9 @@ const fixedGirlPersona = {
 const exAiEls = {
   messages: document.querySelector("#aiMessages"),
   form: document.querySelector("#aiChatForm"),
-  input: document.querySelector("#aiInput")
+  input: document.querySelector("#aiInput"),
+  locationButton: document.querySelector("#aiLocationButton"),
+  webStatus: document.querySelector("#aiWebStatus")
 };
 
 let exAiPersona = { ...fixedGirlPersona, ...loadJson(exAiKeys.persona, {}) };
@@ -74,24 +76,62 @@ function saveUserLocation(position) {
     at: new Date().toISOString()
   };
   saveJson(exAiKeys.location, exAiLocation);
+  updateLocationStatus("ready");
   return exAiLocation;
 }
 
-async function requestUserLocation() {
-  if (!("geolocation" in navigator)) return null;
+function updateLocationStatus(status = "idle", message = "") {
+  if (!exAiEls.locationButton) return;
+  if (status === "ready" && exAiLocation) {
+    exAiEls.locationButton.textContent = `定位已开启 · ±${exAiLocation.accuracy || "?"}m`;
+    exAiEls.locationButton.dataset.status = "ready";
+    return;
+  }
+  if (status === "loading") {
+    exAiEls.locationButton.textContent = "正在定位…";
+    exAiEls.locationButton.dataset.status = "loading";
+    return;
+  }
+  if (status === "denied") {
+    exAiEls.locationButton.textContent = "定位被拒绝，点我重试";
+    exAiEls.locationButton.dataset.status = "denied";
+    return;
+  }
+  if (status === "failed") {
+    exAiEls.locationButton.textContent = message || "定位失败，点我重试";
+    exAiEls.locationButton.dataset.status = "failed";
+    return;
+  }
+  exAiEls.locationButton.textContent = exAiLocation ? `定位已缓存 · ±${exAiLocation.accuracy || "?"}m` : "点我开启定位";
+  exAiEls.locationButton.dataset.status = exAiLocation ? "cached" : "idle";
+}
+
+async function requestUserLocation({ force = false } = {}) {
+  if (!("geolocation" in navigator)) {
+    updateLocationStatus("failed", "浏览器不支持定位");
+    return exAiLocation;
+  }
   try {
     const permission = navigator.permissions?.query
       ? await navigator.permissions.query({ name: "geolocation" })
       : null;
-    if (permission?.state === "denied") return exAiLocation;
+    if (permission?.state === "denied" && !force) {
+      updateLocationStatus("denied");
+      return exAiLocation;
+    }
   } catch {
     // 浏览器不支持 permissions 查询时，继续尝试定位。
   }
+  updateLocationStatus("loading");
   return new Promise((resolve) => {
     navigator.geolocation.getCurrentPosition(
       (position) => resolve(saveUserLocation(position)),
-      () => resolve(exAiLocation),
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 30 * 60 * 1000 }
+      (error) => {
+        const message = error.code === 1 ? "定位被拒绝，点我重试" : "定位超时，点我重试";
+        updateLocationStatus(error.code === 1 ? "denied" : "failed", message);
+        resolve(exAiLocation);
+      },
+      { enableHighAccuracy: true, timeout: force ? 18000 : 10000, maximumAge: force ? 0 : 30 * 60 * 1000 }
     );
   });
 }
@@ -167,6 +207,7 @@ async function loadSharedExAiState() {
     exAiLongMemories = loadJson(exAiKeys.memories, exAiLongMemories);
   } finally {
     exAiLoaded = true;
+    updateLocationStatus("idle");
     requestUserLocation();
     refreshPersonaFromMemory();
     renderExAiMessages();
@@ -247,6 +288,11 @@ exAiEls.form?.addEventListener("submit", async (event) => {
     renderExAiMessages();
     setAiBusy(false);
   }
+});
+
+exAiEls.locationButton?.addEventListener("click", async () => {
+  exAiLastInteractionAt = Date.now();
+  await requestUserLocation({ force: true });
 });
 
 exAiEls.input?.addEventListener("keydown", (event) => {

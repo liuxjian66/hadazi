@@ -14,6 +14,10 @@
 <body data-page="ex-ai">
   <main class="ex-ai-page">
     <section class="ex-ai-chat" aria-label="徐栀聊天">
+      <div class="ex-ai-statusbar">
+        <button id="aiLocationButton" class="ex-ai-status-button" type="button">定位未确认</button>
+        <span id="aiWebStatus" class="ex-ai-status-text">联网查询：已启用</span>
+      </div>
       <div id="aiMessages" class="ex-ai-messages"></div>
 
       <form id="aiChatForm" class="ex-ai-form">
@@ -22,6 +26,6 @@
     </section>
   </main>
 
-  <script src="ex-ai.js?v=xuzhi-strict-web-v1"></script>
+  <script src="ex-ai.js?v=xuzhi-live-gps-v1"></script>
 </body>
 </html>
